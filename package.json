@@ -1,0 +1,23 @@
+{
+  "name": "cambium",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @cambium/db db:generate",
+    "db:migrate": "pnpm --filter @cambium/db db:migrate",
+    "db:seed": "pnpm --filter @cambium/db db:seed",
+    "db:studio": "pnpm --filter @cambium/db db:studio"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "turbo": "^2.8.17",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  }
+}
