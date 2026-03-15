@@ -1,4 +1,4 @@
-import { REGIONS, getSpeciesForRegion } from "@cambium/shared";
+import { REGIONS, getSpeciesForRegion, getWoodBasePrice, CROSS_REGION_SURCHARGE_PER_BF } from "@cambium/shared";
 
 export default function MaterialsPage() {
   return (
@@ -29,7 +29,7 @@ export default function MaterialsPage() {
                     <div>
                       <p className="text-sm font-medium">{s.name}</p>
                       <p className="text-xs text-zinc-500">
-                        Janka: {s.hardness} | {s.density} kg/m³
+                        Janka: {s.hardness} | {s.density} kg/m³ | ${getWoodBasePrice(s.id).toFixed(2)}/bf
                       </p>
                     </div>
                   </div>

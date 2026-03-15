@@ -1,5 +1,4 @@
-export { generateGeometry } from "./geometry";
-export { generateBOM } from "./bom";
-export { calculateCost } from "./cost";
-export { validateParams } from "./validation";
-export { type ConfigResult, computeConfiguration } from "./engine";
+export { computeConfiguration, computeSideTableConfiguration } from "./engine";
+export type { ConfigResult, CostModelInputs } from "./types";
+export { DEFAULT_COST_MODEL, calculateCost } from "./shared-cost";
+export { productRegistry } from "./registry";

@@ -1,10 +1,15 @@
 // ─── Product Types ───────────────────────────────────────────────
 
-export type ProductCategory = "side-table" | "coffee-table" | "shelf" | "desk";
+export type ProductSlug = "side-table" | "table" | "chair" | "shelf";
+export type ProductCategory =
+  | "accent"
+  | "dining"
+  | "seating"
+  | "storage";
 
-export type TopProfile = "square" | "rounded-square" | "circle" | "organic";
+export type TopProfile = "square" | "circle";
+export type TableTopShape = "rectangle" | "rounded-rectangle" | "racetrack";
 export type EdgeProfile = "square" | "chamfer" | "roundover" | "bevel";
-export type LegStyle = "straight" | "tapered" | "splayed" | "hairpin-wrap";
 export type FinishType =
   | "clear"
   | "matte"
@@ -12,20 +17,133 @@ export type FinishType =
   | "light-stain"
   | "dark-stain";
 
-export interface SideTableParams {
-  topWidth: number; // mm, 300-600
-  topDepth: number; // mm, 300-600
-  height: number; // mm, 350-650
-  topThickness: number; // mm, 18-25
+export type LegWrapStyle = "full" | "partial" | "exposed";
+export type CoreVisibility = "hidden" | "accent" | "exposed";
+export type TableMode = "dining" | "coffee";
+export type ChairBackStyle = "solid" | "three-slat" | "five-slat";
+export type SeatContour = "flat" | "scoop";
+export type ShelfMountType = "free-standing" | "wall-mount";
 
-  topProfile: TopProfile;
-  topEdge: EdgeProfile;
-  legStyle: LegStyle;
-  legCount: 3 | 4;
-
+export interface BaseProductParams {
+  productSlug: ProductSlug;
   woodSpecies: string;
   finish: FinishType;
   regionId: string;
+}
+
+export interface SideTableParams extends BaseProductParams {
+  productSlug: "side-table";
+  topWidth: number;
+  topDepth: number;
+  height: number;
+  topThickness: number;
+  topProfile: TopProfile;
+  topEdge: EdgeProfile;
+  legCount: 3 | 4;
+  legWrapStyle: LegWrapStyle;
+  coreVisibility: CoreVisibility;
+  apronCovers: boolean;
+}
+
+export interface TableParams extends BaseProductParams {
+  productSlug: "table";
+  tableMode: TableMode;
+  length: number;
+  width: number;
+  height: number;
+  topThickness: number;
+  topShape: TableTopShape;
+  edgeProfile: EdgeProfile;
+  apronVisibility: "hidden" | "visible";
+  coreVisibility: CoreVisibility;
+}
+
+export interface ChairParams extends BaseProductParams {
+  productSlug: "chair";
+  seatWidth: number;
+  seatDepth: number;
+  seatHeight: number;
+  backHeight: number;
+  seatThickness: number;
+  backStyle: ChairBackStyle;
+  seatContour: SeatContour;
+  legWrapStyle: LegWrapStyle;
+  coreVisibility: CoreVisibility;
+}
+
+export interface ShelfParams extends BaseProductParams {
+  productSlug: "shelf";
+  mountType: ShelfMountType;
+  shelfWidth: number;
+  shelfDepth: number;
+  shelfThickness: number;
+  shelfCount: number;
+  unitHeight: number;
+  shelfSpacing: number;
+  edgeProfile: EdgeProfile;
+  backPanel: boolean;
+  coreVisibility: CoreVisibility;
+}
+
+export type AnyProductParams =
+  | SideTableParams
+  | TableParams
+  | ChairParams
+  | ShelfParams;
+
+// ─── Catalog Types ───────────────────────────────────────────────
+
+export interface NumericConstraint {
+  min: number;
+  max: number;
+  default: number;
+  step: number;
+  unit: string;
+}
+
+export interface ProductConstraints {
+  [key: string]: NumericConstraint;
+}
+
+export interface PackagingSpec {
+  box: { width: number; depth: number; height: number };
+  weightKg: { min: number; max: number };
+  assemblyMinutes: { min: number; max: number };
+}
+
+export interface CoreSpec {
+  summary: string;
+  rodDiameterMm: number;
+  jointTypes: string[];
+  foldable: boolean;
+  finish: string;
+}
+
+export interface PanelSpec {
+  summary: string;
+  material: string;
+  range: { min: number; max: number };
+}
+
+export interface PriceBand {
+  min: number;
+  max: number;
+}
+
+export interface ProductDefinition<TParams extends AnyProductParams = AnyProductParams> {
+  slug: ProductSlug;
+  sku: string;
+  label: string;
+  category: ProductCategory;
+  description: string;
+  modes?: { id: string; label: string }[];
+  defaultModeLabel?: string;
+  priceBand: PriceBand;
+  defaults: TParams;
+  constraints: ProductConstraints;
+  core: CoreSpec;
+  panels: PanelSpec;
+  packaging: PackagingSpec;
 }
 
 // ─── Geometry Types ──────────────────────────────────────────────
@@ -36,10 +154,21 @@ export interface Vec3 {
   z: number;
 }
 
+export type GeometryPartType =
+  | "panel"
+  | "rod"
+  | "joint"
+  | "brace"
+  | "surface"
+  | "hardware";
+
+export type GeometryMaterial = "wood" | "metal" | "plastic";
+
 export interface GeometryPart {
   id: string;
   name: string;
-  type: "top" | "leg" | "stretcher" | "subframe";
+  type: GeometryPartType;
+  material: GeometryMaterial;
   position: Vec3;
   rotation: Vec3;
   dimensions: Vec3;
@@ -54,7 +183,6 @@ export type ShapeDescriptor =
       radiusBottom: number;
       height: number;
     }
-  | { kind: "extrude"; profile: Vec3[]; depth: number }
   | {
       kind: "rounded-box";
       width: number;
@@ -73,22 +201,17 @@ export interface GeometryResult {
 export interface BOMItem {
   partId: string;
   name: string;
+  category: "panel" | "core" | "hardware" | "packaging";
   material: string;
   quantity: number;
-  dimensions: { length: number; width: number; thickness: number };
-  boardFeet: number;
+  dimensions?: { length: number; width: number; thickness: number };
+  boardFeet?: number;
+  unitCost?: number;
 }
 
 export interface BOMResult {
   items: BOMItem[];
   totalBoardFeet: number;
-  hardwareItems: HardwareItem[];
-}
-
-export interface HardwareItem {
-  name: string;
-  quantity: number;
-  unitCost: number;
 }
 
 // ─── Cost Types ──────────────────────────────────────────────────
@@ -101,6 +224,10 @@ export interface CostBreakdown {
   shipping: number;
   margin: number;
   total: number;
+  /** Extra cost included in material from using non-local wood species */
+  crossRegionSurcharge: number;
+  /** Whether the selected wood is local to the user's region */
+  isLocalWood: boolean;
 }
 
 // ─── Validation Types ────────────────────────────────────────────
@@ -135,12 +262,12 @@ export interface Region {
 export interface WoodSpecies {
   id: string;
   name: string;
-  commonName: string;
-  description: string;
-  density: number; // kg/m3
-  hardness: number; // janka
-  color: string; // hex for 3D preview
-  grainPattern: "straight" | "wavy" | "interlocked" | "irregular";
+  commonName?: string;
+  description?: string;
+  density: number;
+  hardness: number;
+  color: string;
+  grainPattern?: "straight" | "wavy" | "interlocked" | "irregular";
 }
 
 export interface RegionWoodSpecies {
@@ -163,8 +290,8 @@ export interface Order {
   id: string;
   customerEmail: string;
   regionId: string;
-  productSlug: string;
-  configuration: SideTableParams;
+  productSlug: ProductSlug;
+  configuration: AnyProductParams;
   bom: BOMResult;
   cost: CostBreakdown;
   status: OrderStatus;

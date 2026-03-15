@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Sidebar from "../components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Cambium Admin",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
+      </body>
     </html>
   );
 }

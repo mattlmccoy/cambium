@@ -1,27 +1,10 @@
-import type { SideTableParams } from "../types/index";
+import type { ProductSlug } from "../types/index";
+export * from "./products";
+export * from "./regional-pricing";
+export * from "./zip-regions";
+export * from "./stories";
 
 // ─── Side Table Parameter Constraints ────────────────────────────
-
-export const SIDE_TABLE_CONSTRAINTS = {
-  topWidth: { min: 300, max: 600, default: 400, step: 10, unit: "mm" },
-  topDepth: { min: 300, max: 600, default: 400, step: 10, unit: "mm" },
-  height: { min: 350, max: 650, default: 500, step: 10, unit: "mm" },
-  topThickness: { min: 18, max: 25, default: 20, step: 1, unit: "mm" },
-} as const;
-
-export const SIDE_TABLE_DEFAULTS: SideTableParams = {
-  topWidth: 400,
-  topDepth: 400,
-  height: 500,
-  topThickness: 20,
-  topProfile: "rounded-square",
-  topEdge: "roundover",
-  legStyle: "tapered",
-  legCount: 4,
-  woodSpecies: "white-oak",
-  finish: "natural-oil",
-  regionId: "seattle",
-};
 
 // ─── CNC Constants ───────────────────────────────────────────────
 
@@ -180,4 +163,8 @@ export function getSpeciesForRegion(regionId: string) {
 // Helper to get species by ID
 export function getSpeciesById(id: string) {
   return WOOD_SPECIES.find((s) => s.id === id);
+}
+
+export function isProductSlug(value: string): value is ProductSlug {
+  return value === "side-table" || value === "table" || value === "chair" || value === "shelf";
 }
