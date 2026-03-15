@@ -185,10 +185,10 @@ export default function Home() {
               Cambium
             </p>
             <h1 className="mb-4 text-4xl font-light leading-tight tracking-tight text-stone-900 sm:text-5xl">
-              Furniture from forests near you.
+              Designed by you. Built near you.
             </h1>
             <p className="mb-6 text-lg leading-relaxed text-stone-600">
-              Every Cambium piece starts with locally-sourced wood from a workshop in your region. You design it, your local microfactory builds it, and it ships flat-packed to your door.
+              Custom solid wood furniture, crafted at a microfactory in your region from locally-sourced lumber. Design it in 3D, and it ships flat-packed to your door.
             </p>
             <ZipEntry />
           </div>
