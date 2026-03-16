@@ -243,20 +243,21 @@ export default function Home() {
                   .slice(0, 2);
 
                 return (
-                  <motion.div key={product.slug} variants={fadeUp}>
+                  <motion.div key={product.slug} variants={fadeUp} className="flex">
                     <motion.div
                       initial="rest"
                       whileHover="hover"
                       variants={cardHover}
+                      className="flex w-full"
                     >
                       <Link
                         href={`/configure/${product.slug}`}
-                        className="group block overflow-hidden rounded-[28px] border border-white/50 bg-white/60 shadow-[0_24px_60px_rgba(66,44,22,0.12)] backdrop-blur transition-shadow hover:shadow-[0_24px_60px_rgba(66,44,22,0.2)]"
+                        className="group flex w-full flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white/60 shadow-[0_24px_60px_rgba(66,44,22,0.12)] backdrop-blur transition-shadow hover:shadow-[0_24px_60px_rgba(66,44,22,0.2)]"
                       >
+                        {/* Card header — fixed height gradient with illustration */}
                         <div
-                          className={`relative h-52 overflow-hidden bg-gradient-to-br ${CARD_STYLES[index]} p-6 text-white`}
+                          className={`relative h-52 shrink-0 overflow-hidden bg-gradient-to-br ${CARD_STYLES[index]} p-6 text-white`}
                         >
-                          {/* Product illustration */}
                           {Illustration && (
                             <div className="absolute -right-2 -bottom-2 h-36 w-36 text-white/[0.08] transition-all duration-500 group-hover:text-white/[0.15] group-hover:scale-110">
                               <Illustration className="h-full w-full" />
@@ -276,22 +277,25 @@ export default function Home() {
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-3 p-6">
-                          <div className="text-sm leading-relaxed text-stone-600">
-                            {product.anatomyDescription}
-                          </div>
-                          {isDetected && bestWoods.length > 0 && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700">
-                              <span className="font-medium">Best local woods:</span>
-                              {bestWoods.map((w) => (
-                                <span key={w.id} className="flex items-center gap-1">
-                                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} />
-                                  {w.name}
-                                </span>
-                              ))}
+                        {/* Card body — flex-1 so all cards match height */}
+                        <div className="flex flex-1 flex-col justify-between p-6">
+                          <div className="space-y-3">
+                            <div className="text-sm leading-relaxed text-stone-600">
+                              {product.anatomyDescription}
                             </div>
-                          )}
-                          <div className="flex items-center justify-between text-sm">
+                            {isDetected && bestWoods.length > 0 && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-emerald-700">
+                                <span className="font-medium">Best local woods:</span>
+                                {bestWoods.map((w) => (
+                                  <span key={w.id} className="flex items-center gap-1">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} />
+                                    {w.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-4 text-sm">
                             <span className="font-medium text-stone-900">
                               {startingPrice ? `From $${startingPrice}` : `$${product.priceBand.min} \u2013 $${product.priceBand.max}`}
                             </span>
@@ -362,7 +366,10 @@ export default function Home() {
             <div className="max-w-xs">
               <div className="mb-3 flex items-center gap-2">
                 <CambiumLogoMark size={20} color="#78716c" />
-                <span className="text-sm font-light tracking-[0.15em] text-stone-700">CAMBIUM</span>
+                <span className="flex items-baseline gap-1">
+                  <span className="text-sm font-light tracking-[0.15em] text-stone-700">CAMBIUM</span>
+                  <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-stone-400">Design</span>
+                </span>
               </div>
               <p className="text-xs leading-relaxed text-stone-400">
                 Furniture with roots. Designed by you, built from locally-sourced wood at a microfactory near you.

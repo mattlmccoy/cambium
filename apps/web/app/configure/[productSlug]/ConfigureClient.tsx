@@ -93,8 +93,13 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
           <CambiumLogoMark size={20} color="#44403c" />
-          <span className="text-lg font-light tracking-[0.15em] text-stone-900">
-            CAMBIUM
+          <span className="flex items-baseline gap-1">
+            <span className="text-lg font-light tracking-[0.15em] text-stone-900">
+              CAMBIUM
+            </span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
+              Design
+            </span>
           </span>
         </Link>
         <div className="text-right">

@@ -40,8 +40,13 @@ export function CambiumWordmark({
   return (
     <span className={`flex items-center gap-2 ${className}`}>
       <CambiumLogoMark size={22} />
-      <span className="text-lg font-light tracking-[0.15em] text-stone-900">
-        CAMBIUM
+      <span className="flex items-baseline gap-1">
+        <span className="text-lg font-light tracking-[0.15em] text-stone-900">
+          CAMBIUM
+        </span>
+        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
+          Design
+        </span>
       </span>
     </span>
   );

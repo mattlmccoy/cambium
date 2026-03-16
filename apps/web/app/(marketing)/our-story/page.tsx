@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { REGIONS, WOOD_SPECIES, getSpeciesForRegion } from "@cambium/shared";
 import { ZipEntry } from "@/components/ZipEntry";
+import { CambiumLogoMark } from "@/components/CambiumLogo";
 import { useRegionStore } from "@/lib/region-store";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -148,7 +149,8 @@ export default function OurStoryPage() {
           variants={stagger}
           className="mx-auto max-w-3xl"
         >
-          <motion.div variants={fadeUp} className="mb-4">
+          <motion.div variants={fadeUp} className="mb-4 flex items-center justify-center gap-2">
+            <CambiumLogoMark size={18} color="#a8a29e" />
             <span className="text-xs uppercase tracking-[0.4em] text-stone-400">
               Cambium Design
             </span>

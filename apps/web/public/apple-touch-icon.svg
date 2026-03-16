@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#fafaf9"/>
+  <!-- Outer bark -->
+  <circle cx="90" cy="90" r="68" stroke="#44403c" stroke-width="3" opacity="0.3"/>
+  <!-- Growth rings -->
+  <circle cx="90" cy="90" r="52" stroke="#44403c" stroke-width="2.5" opacity="0.4"/>
+  <circle cx="90" cy="90" r="36" stroke="#44403c" stroke-width="2" opacity="0.55"/>
+  <circle cx="90" cy="90" r="22" stroke="#44403c" stroke-width="2" opacity="0.7"/>
+  <!-- Heartwood center -->
+  <circle cx="90" cy="90" r="9" fill="#44403c" opacity="0.9"/>
+</svg>
