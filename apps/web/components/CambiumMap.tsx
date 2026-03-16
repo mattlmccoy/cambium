@@ -25,7 +25,7 @@ const FIPS_TO_STATE: Record<string, string> = {
   "56": "WY",
 };
 
-// ─── Region colors (muted palette) ─────────────────────────────
+// ─── Region colors (muted earth tones) ──────────────────────────
 
 const REGION_COLORS: Record<string, string> = {
   seattle:     "#7da87d",
@@ -55,9 +55,17 @@ function buildStateToRegionMap(): Record<string, string> {
 const STATE_TO_REGION = buildStateToRegionMap();
 const GEO_URL = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
 
-// Approximate conversion: miles to SVG units for the AlbersUSA projection
-// The US is roughly 2,800 miles wide and the map is 800 SVG units
-const MILES_TO_SVG = 800 / 2800;
+// ─── Tier ring styling ──────────────────────────────────────────
+// Single warm stone tone, differentiated by stroke weight + opacity.
+// No fill — just clean concentric outlines.
+
+const TIER_RING_STYLES: Record<number, { strokeWidth: number; opacity: number; dash: string }> = {
+  1: { strokeWidth: 1.0, opacity: 0.50, dash: "" },
+  2: { strokeWidth: 1.0, opacity: 0.35, dash: "6 3" },
+  3: { strokeWidth: 1.0, opacity: 0.22, dash: "3 3" },
+};
+
+const RING_COLOR = "#78716c"; // stone-500 — single neutral tone for all rings
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -86,7 +94,7 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
     return [coords.lng, coords.lat] as [number, number];
   }, [userRegionId]);
 
-  // Tier distances for ring visualization (exclude Tier 0)
+  // Tier distances for ring visualization (exclude Tier 0 and Infinity)
   const tierRings = useMemo(() => {
     return REGION_TIERS.filter((t) => t.tier > 0 && t.maxDistance < Infinity);
   }, []);
@@ -132,16 +140,22 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
                 : "#eeeeee";
               const isUserRegion = regionId === userRegionId;
 
+              // Desaturate states when tier rings are shown so rings read clearly
+              const dimmed = focusRegion && !isUserRegion;
+
               return (
                 <Geography
                   key={geo.rpiKey}
                   geography={geo}
-                  fill={isUserRegion ? "#374151" : fillColor}
+                  fill={isUserRegion ? "#374151" : dimmed ? "#e7e5e4" : fillColor}
                   stroke="#ffffff"
                   strokeWidth={0.5}
                   style={{
-                    default: { outline: "none" },
-                    hover: { outline: "none", fill: isUserRegion ? "#1f2937" : `${fillColor}dd` },
+                    default: { outline: "none", transition: "fill 0.3s ease" },
+                    hover: {
+                      outline: "none",
+                      fill: isUserRegion ? "#1f2937" : dimmed ? "#d6d3d1" : `${fillColor}dd`,
+                    },
                     pressed: { outline: "none" },
                   }}
                 />
@@ -150,7 +164,7 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           }
         </Geographies>
 
-        {/* Tier rings when a region is focused */}
+        {/* Tier rings — monochrome concentric circles */}
         {focusRegion && (() => {
           const focusCoords = REGION_COORDINATES[focusRegion];
           if (!focusCoords) return null;
@@ -158,29 +172,31 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
             <Marker coordinates={[focusCoords.lng, focusCoords.lat]}>
               {tierRings.map((tier) => {
                 const radius = tier.maxDistance * milesToSvg;
+                const style = TIER_RING_STYLES[tier.tier];
+                if (!style) return null;
                 return (
                   <g key={tier.tier}>
                     <circle
                       r={radius}
-                      fill={tier.color}
-                      fillOpacity={0.06}
-                      stroke={tier.color}
-                      strokeWidth={1}
-                      strokeOpacity={0.4}
-                      strokeDasharray="4 3"
+                      fill="none"
+                      stroke={RING_COLOR}
+                      strokeWidth={style.strokeWidth}
+                      strokeOpacity={style.opacity}
+                      strokeDasharray={style.dash || undefined}
                     />
-                    {/* Tier label at top of ring */}
+                    {/* Subtle label at top of ring */}
                     <text
-                      y={-radius - 4}
+                      y={-radius - 3}
                       textAnchor="middle"
                       style={{
-                        fontSize: 7,
-                        fontWeight: 500,
-                        fill: tier.color,
+                        fontSize: 6.5,
+                        fontWeight: 400,
+                        fill: "#a8a29e",
                         fontFamily: "system-ui, sans-serif",
+                        letterSpacing: "0.02em",
                       }}
                     >
-                      {tier.label} +${tier.surchargePerBf}/bf
+                      {tier.maxDistance.toLocaleString()} mi · +${tier.surchargePerBf}/bf
                     </text>
                   </g>
                 );
@@ -195,8 +211,14 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           if (!coords) return null;
           const isUser = region.id === userRegionId;
           const isFocus = region.id === focusRegion;
+
+          // When focused, show tier distance as a subtle outer ring (opacity only)
           const tier = regionTiers[region.id];
-          const tierColor = tier?.color;
+          const tierNum = tier?.tier ?? 0;
+          // Farther tiers → more transparent marker
+          const markerOpacity = focusRegion
+            ? isFocus ? 1 : tierNum <= 1 ? 0.9 : tierNum === 2 ? 0.65 : 0.4
+            : 1;
 
           return (
             <Marker
@@ -215,32 +237,35 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
               onMouseLeave={() => setTooltip(null)}
               onClick={() => handleMarkerClick(region.id)}
             >
-              {/* Tier highlight ring when focus is active */}
-              {focusRegion && tier && (
+              {/* Pulse ring on focused marker */}
+              {isFocus && (
                 <circle
-                  r={8}
-                  fill={tierColor}
-                  fillOpacity={0.25}
-                  stroke={tierColor}
-                  strokeWidth={1}
-                  strokeOpacity={0.5}
+                  r={10}
+                  fill="#f59e0b"
+                  fillOpacity={0.15}
+                  stroke="#f59e0b"
+                  strokeWidth={0.75}
+                  strokeOpacity={0.3}
                 />
               )}
               <circle
-                r={isFocus ? 7 : isUser ? 6 : 4}
-                fill={isFocus ? "#f59e0b" : isUser ? "#f59e0b" : focusRegion && tier ? tierColor ?? "#ffffff" : "#ffffff"}
-                stroke={isFocus ? "#92400e" : isUser ? "#92400e" : "#374151"}
-                strokeWidth={isFocus ? 2.5 : isUser ? 2 : 1.5}
+                r={isFocus ? 5.5 : isUser ? 5 : 3.5}
+                fill={isFocus || isUser ? "#f59e0b" : "#ffffff"}
+                fillOpacity={markerOpacity}
+                stroke={isFocus || isUser ? "#92400e" : "#57534e"}
+                strokeWidth={isFocus ? 2 : isUser ? 1.75 : 1.25}
+                strokeOpacity={markerOpacity}
                 style={{ cursor: "pointer" }}
               />
               {!compact && (
                 <text
                   textAnchor="middle"
-                  y={-10}
+                  y={isFocus ? -12 : -8}
                   style={{
-                    fontSize: isFocus || isUser ? 10 : 8,
+                    fontSize: isFocus || isUser ? 9 : 7.5,
                     fontWeight: isFocus || isUser ? 600 : 400,
-                    fill: isFocus ? "#92400e" : isUser ? "#1f2937" : "#6b7280",
+                    fill: isFocus ? "#44403c" : isUser ? "#1f2937" : "#78716c",
+                    fillOpacity: markerOpacity,
                     fontFamily: "system-ui, sans-serif",
                   }}
                 >
@@ -251,42 +276,34 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           );
         })}
 
-        {/* Arc from user region (if detected) */}
+        {/* User region glow (when not in focus mode) */}
         {userCoords && userRegionId && !focusRegion && (
           <Marker coordinates={userCoords}>
-            <circle r={8} fill="#f59e0b" fillOpacity={0.3} />
+            <circle r={8} fill="#f59e0b" fillOpacity={0.2} />
           </Marker>
         )}
       </ComposableMap>
 
-      {/* Focus info bar */}
+      {/* Minimal focus bar — just the region name + dismiss */}
       {focusRegion && (
-        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-lg bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
-          <div className="flex-1">
-            <div className="text-xs font-medium text-stone-900">
-              {REGIONS.find((r) => r.id === focusRegion)?.name} tiers
-            </div>
-            <div className="mt-1 flex gap-3">
-              {REGION_TIERS.filter((t) => t.tier > 0).map((tier) => (
-                <div key={tier.tier} className="flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tier.color }} />
-                  <span className="text-[10px] text-stone-500">
-                    {tier.label} +${tier.surchargePerBf}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-lg bg-white/90 px-4 py-2 shadow-md backdrop-blur-sm">
+          <span className="text-xs text-stone-600">
+            Pricing tiers from{" "}
+            <span className="font-semibold text-stone-900">
+              {REGIONS.find((r) => r.id === focusRegion)?.city}
+            </span>
+            {" "}— hover a workshop for details
+          </span>
           <button
             onClick={() => setFocusRegion(null)}
-            className="rounded-md border border-stone-200 px-2 py-1 text-[10px] text-stone-500 hover:bg-stone-50"
+            className="ml-3 rounded-md px-2 py-0.5 text-[10px] text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
           >
-            Clear
+            ✕
           </button>
         </div>
       )}
 
-      {/* Tooltip */}
+      {/* Tooltip (default / no focus) */}
       {tooltip && !focusRegion && (
         <MapTooltip
           regionId={tooltip.regionId}
@@ -295,7 +312,7 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
         />
       )}
 
-      {/* Tier tooltip when focused */}
+      {/* Tier tooltip (focus mode — hover on non-focus markers) */}
       {tooltip && focusRegion && tooltip.regionId !== focusRegion && (
         <TierTooltip
           fromRegion={focusRegion}
@@ -385,26 +402,22 @@ function TierTooltip({
 
   return (
     <div
-      className="pointer-events-none absolute z-50 rounded-xl border bg-white p-4 shadow-lg"
+      className="pointer-events-none absolute z-50 rounded-xl border border-stone-200 bg-white p-4 shadow-lg"
       style={{
         left: x + 12,
         top: y - 20,
         maxWidth: 240,
-        borderColor: tier.color,
       }}
     >
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center gap-2">
         <span className="text-sm font-medium text-stone-900">{to.name}</span>
-        <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
-          style={{ backgroundColor: tier.color }}
-        >
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
           {tier.label}
         </span>
       </div>
       <div className="space-y-0.5 text-[11px] text-stone-500">
-        <div>~{distance} miles from {from.city}</div>
-        <div>+${tier.surchargePerBf.toFixed(2)}/bf surcharge</div>
+        <div>~{distance.toLocaleString()} mi from {from.city}</div>
+        <div className="font-medium text-stone-700">+${tier.surchargePerBf.toFixed(2)}/bf surcharge</div>
         <div>{Math.round(tier.handlingMultiplier * 100 - 100)}% handling uplift</div>
       </div>
     </div>
