@@ -25,19 +25,28 @@ const FIPS_TO_STATE: Record<string, string> = {
   "56": "WY",
 };
 
-// ─── Region colors (muted earth tones) ──────────────────────────
+// ─── Region colors derived from signature wood species ──────────
+// Each region color is a muted variant of its most iconic local species.
 
 const REGION_COLORS: Record<string, string> = {
-  seattle:     "#7da87d",
-  sacramento:  "#c7956d",
-  phoenix:     "#d4a76a",
-  denver:      "#8c9cb8",
-  austin:      "#b87a6d",
-  minneapolis: "#7d9db8",
-  chicago:     "#a0856d",
-  pittsburgh:  "#8d7daa",
-  boston:       "#6d8a9d",
-  atlanta:     "#9daa7d",
+  seattle:     "#c9a87c",  // Douglas Fir — warm tan
+  sacramento:  "#8c6b53",  // Claro Walnut — rich brown
+  phoenix:     "#a07058",  // Mesquite — desert rust
+  denver:      "#95a0b0",  // Beetle-Kill Pine — blue-gray
+  austin:      "#c09562",  // Pecan — honey amber
+  minneapolis: "#d4c5a8",  // Hard Maple — pale cream
+  chicago:     "#7a6050",  // Black Walnut — deep brown
+  pittsburgh:  "#b06850",  // Black Cherry — cherry
+  boston:       "#c8b088",  // Beech — warm tan
+  atlanta:     "#c4a868",  // Southern Yellow Pine — straw gold
+};
+
+// ─── Tier ring colors — warm earthy progression ─────────────────
+
+const TIER_RING_COLORS: Record<number, { stroke: string; fill: string; label: string }> = {
+  1: { stroke: "#6b9e6b", fill: "#6b9e6b", label: "#5a8a5a" },  // sage green — Neighboring
+  2: { stroke: "#c89050", fill: "#c89050", label: "#b07a40" },  // warm amber — Regional
+  3: { stroke: "#b05040", fill: "#b05040", label: "#9a3a30" },  // earthy rust — Distant
 };
 
 // ─── Build state → regionId lookup ──────────────────────────────
@@ -54,18 +63,6 @@ function buildStateToRegionMap(): Record<string, string> {
 
 const STATE_TO_REGION = buildStateToRegionMap();
 const GEO_URL = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
-
-// ─── Tier ring styling ──────────────────────────────────────────
-// Single warm stone tone, differentiated by stroke weight + opacity.
-// No fill — just clean concentric outlines.
-
-const TIER_RING_STYLES: Record<number, { strokeWidth: number; opacity: number; dash: string }> = {
-  1: { strokeWidth: 1.0, opacity: 0.50, dash: "" },
-  2: { strokeWidth: 1.0, opacity: 0.35, dash: "6 3" },
-  3: { strokeWidth: 1.0, opacity: 0.22, dash: "3 3" },
-};
-
-const RING_COLOR = "#78716c"; // stone-500 — single neutral tone for all rings
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -140,14 +137,14 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
                 : "#eeeeee";
               const isUserRegion = regionId === userRegionId;
 
-              // Desaturate states when tier rings are shown so rings read clearly
+              // When focused, mute states so colored rings read clearly
               const dimmed = focusRegion && !isUserRegion;
 
               return (
                 <Geography
                   key={geo.rpiKey}
                   geography={geo}
-                  fill={isUserRegion ? "#374151" : dimmed ? "#e7e5e4" : fillColor}
+                  fill={isUserRegion ? "#374151" : dimmed ? "#e2ddd6" : fillColor}
                   stroke="#ffffff"
                   strokeWidth={0.5}
                   style={{
@@ -164,7 +161,7 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           }
         </Geographies>
 
-        {/* Tier rings — monochrome concentric circles */}
+        {/* Colored tier rings — concentric circles with earthy progression */}
         {focusRegion && (() => {
           const focusCoords = REGION_COORDINATES[focusRegion];
           if (!focusCoords) return null;
@@ -172,31 +169,33 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
             <Marker coordinates={[focusCoords.lng, focusCoords.lat]}>
               {tierRings.map((tier) => {
                 const radius = tier.maxDistance * milesToSvg;
-                const style = TIER_RING_STYLES[tier.tier];
-                if (!style) return null;
+                const colors = TIER_RING_COLORS[tier.tier];
+                if (!colors) return null;
                 return (
                   <g key={tier.tier}>
+                    {/* Subtle fill for the ring band */}
                     <circle
                       r={radius}
-                      fill="none"
-                      stroke={RING_COLOR}
-                      strokeWidth={style.strokeWidth}
-                      strokeOpacity={style.opacity}
-                      strokeDasharray={style.dash || undefined}
+                      fill={colors.fill}
+                      fillOpacity={0.06}
+                      stroke={colors.stroke}
+                      strokeWidth={1.2}
+                      strokeOpacity={0.5}
+                      strokeDasharray={tier.tier === 1 ? "" : tier.tier === 2 ? "8 4" : "4 4"}
                     />
-                    {/* Subtle label at top of ring */}
+                    {/* Label at top of ring */}
                     <text
-                      y={-radius - 3}
+                      y={-radius - 4}
                       textAnchor="middle"
                       style={{
-                        fontSize: 6.5,
-                        fontWeight: 400,
-                        fill: "#a8a29e",
+                        fontSize: 7,
+                        fontWeight: 500,
+                        fill: colors.label,
                         fontFamily: "system-ui, sans-serif",
                         letterSpacing: "0.02em",
                       }}
                     >
-                      {tier.maxDistance.toLocaleString()} mi · +${tier.surchargePerBf}/bf
+                      {tier.label} · +${tier.surchargePerBf}/bf
                     </text>
                   </g>
                 );
@@ -212,12 +211,14 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           const isUser = region.id === userRegionId;
           const isFocus = region.id === focusRegion;
 
-          // When focused, show tier distance as a subtle outer ring (opacity only)
+          // In focus mode, show tier-colored halos on non-focus markers
           const tier = regionTiers[region.id];
           const tierNum = tier?.tier ?? 0;
-          // Farther tiers → more transparent marker
+          const tierColors = tier ? TIER_RING_COLORS[tierNum] : null;
+
+          // Fade farther markers slightly
           const markerOpacity = focusRegion
-            ? isFocus ? 1 : tierNum <= 1 ? 0.9 : tierNum === 2 ? 0.65 : 0.4
+            ? isFocus ? 1 : tierNum <= 1 ? 0.95 : tierNum === 2 ? 0.75 : 0.5
             : 1;
 
           return (
@@ -237,6 +238,17 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
               onMouseLeave={() => setTooltip(null)}
               onClick={() => handleMarkerClick(region.id)}
             >
+              {/* Tier-colored halo on non-focus markers when focused */}
+              {focusRegion && !isFocus && tierColors && (
+                <circle
+                  r={8}
+                  fill={tierColors.stroke}
+                  fillOpacity={0.15}
+                  stroke={tierColors.stroke}
+                  strokeWidth={0.5}
+                  strokeOpacity={0.3}
+                />
+              )}
               {/* Pulse ring on focused marker */}
               {isFocus && (
                 <circle
@@ -284,16 +296,35 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
         )}
       </ComposableMap>
 
-      {/* Minimal focus bar — just the region name + dismiss */}
+      {/* Focus bar with tier legend */}
       {focusRegion && (
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-lg bg-white/90 px-4 py-2 shadow-md backdrop-blur-sm">
-          <span className="text-xs text-stone-600">
-            Pricing tiers from{" "}
-            <span className="font-semibold text-stone-900">
-              {REGIONS.find((r) => r.id === focusRegion)?.city}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-lg bg-white/90 px-4 py-2.5 shadow-md backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-stone-600">
+              Pricing tiers from{" "}
+              <span className="font-semibold text-stone-900">
+                {REGIONS.find((r) => r.id === focusRegion)?.city}
+              </span>
             </span>
-            {" "}— hover a workshop for details
-          </span>
+            {/* Tier legend dots */}
+            <div className="flex items-center gap-3">
+              {tierRings.map((tier) => {
+                const colors = TIER_RING_COLORS[tier.tier];
+                if (!colors) return null;
+                return (
+                  <div key={tier.tier} className="flex items-center gap-1">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: colors.stroke }}
+                    />
+                    <span className="text-[10px] text-stone-500">
+                      {tier.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           <button
             onClick={() => setFocusRegion(null)}
             className="ml-3 rounded-md px-2 py-0.5 text-[10px] text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
@@ -341,40 +372,49 @@ function MapTooltip({
 
   if (!region) return null;
 
+  // Show the signature species color as a subtle accent
+  const regionColor = REGION_COLORS[regionId];
+
   return (
     <div
-      className="pointer-events-none absolute z-50 rounded-xl border border-stone-200 bg-white p-4 shadow-lg"
+      className="pointer-events-none absolute z-50 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg"
       style={{
         left: x + 12,
         top: y - 20,
         maxWidth: 260,
       }}
     >
-      <div className="mb-1 text-sm font-medium text-stone-900">
-        {region.name}
-      </div>
-      <div className="mb-3 text-xs text-stone-500">
-        {region.city}, {region.state}
-      </div>
-      <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-stone-400">
-        Local Species
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {species.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5"
-          >
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: s.color }}
-            />
-            <span className="text-[10px] text-stone-600">{s.name}</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 text-[10px] text-stone-400">
-        Click to show pricing tiers
+      {/* Subtle color bar at top matching the region's signature wood */}
+      {regionColor && (
+        <div className="h-1" style={{ backgroundColor: regionColor, opacity: 0.6 }} />
+      )}
+      <div className="p-4">
+        <div className="mb-1 text-sm font-medium text-stone-900">
+          {region.name}
+        </div>
+        <div className="mb-3 text-xs text-stone-500">
+          {region.city}, {region.state}
+        </div>
+        <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-stone-400">
+          Local Species
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {species.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5"
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: s.color }}
+              />
+              <span className="text-[10px] text-stone-600">{s.name}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 text-[10px] text-stone-400">
+          Click to show pricing tiers
+        </div>
       </div>
     </div>
   );
@@ -400,25 +440,33 @@ function TierTooltip({
 
   if (!from || !to) return null;
 
+  const tierColors = TIER_RING_COLORS[tier.tier];
+
   return (
     <div
-      className="pointer-events-none absolute z-50 rounded-xl border border-stone-200 bg-white p-4 shadow-lg"
+      className="pointer-events-none absolute z-50 overflow-hidden rounded-xl bg-white shadow-lg"
       style={{
         left: x + 12,
         top: y - 20,
         maxWidth: 240,
+        border: `1.5px solid ${tierColors?.stroke ?? "#d6d3d1"}`,
       }}
     >
-      <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-sm font-medium text-stone-900">{to.name}</span>
-        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
-          {tier.label}
-        </span>
-      </div>
-      <div className="space-y-0.5 text-[11px] text-stone-500">
-        <div>~{distance.toLocaleString()} mi from {from.city}</div>
-        <div className="font-medium text-stone-700">+${tier.surchargePerBf.toFixed(2)}/bf surcharge</div>
-        <div>{Math.round(tier.handlingMultiplier * 100 - 100)}% handling uplift</div>
+      <div className="p-4">
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="text-sm font-medium text-stone-900">{to.name}</span>
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+            style={{ backgroundColor: tierColors?.stroke ?? "#a8a29e" }}
+          >
+            {tier.label}
+          </span>
+        </div>
+        <div className="space-y-0.5 text-[11px] text-stone-500">
+          <div>~{distance.toLocaleString()} mi from {from.city}</div>
+          <div className="font-medium text-stone-700">+${tier.surchargePerBf.toFixed(2)}/bf surcharge</div>
+          <div>{Math.round(tier.handlingMultiplier * 100 - 100)}% handling uplift</div>
+        </div>
       </div>
     </div>
   );
