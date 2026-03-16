@@ -10,6 +10,7 @@ import { useRegionStore } from "@/lib/region-store";
 import { useBenchStore } from "@/lib/bench-store";
 import { useSavedDesignsStore } from "@/lib/saved-designs-store";
 import { isProductSlug } from "@cambium/shared";
+import { CambiumLogoMark } from "@/components/CambiumLogo";
 
 const ConfiguratorScene = dynamic(
   () =>
@@ -22,7 +23,12 @@ const ConfiguratorScene = dynamic(
 function SceneLoading() {
   return (
     <div className="flex min-h-[400px] h-full w-full items-center justify-center rounded-xl bg-stone-100">
-      <div className="text-sm text-stone-400">Loading 3D viewer...</div>
+      <div className="flex flex-col items-center gap-3">
+        <div className="animate-pulse">
+          <CambiumLogoMark size={40} color="#a8a29e" />
+        </div>
+        <span className="text-xs text-stone-400">Loading 3D viewer...</span>
+      </div>
     </div>
   );
 }
@@ -84,18 +90,16 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4">
-        <Link href="/" className="flex items-baseline gap-1">
+      <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-3">
+        <Link href="/" className="flex items-center gap-2">
+          <CambiumLogoMark size={20} color="#44403c" />
           <span className="text-lg font-light tracking-[0.15em] text-stone-900">
             CAMBIUM
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
-            Design
-          </span>
         </Link>
         <div className="text-right">
-          <div className="text-sm font-medium text-stone-900">{product.displayName}</div>
-          <div className="text-xs text-stone-500">{product.label} &middot; {product.sku}</div>
+          <div className="font-display text-base text-stone-900">{product.displayName}</div>
+          <div className="text-[10px] uppercase tracking-wider text-stone-400">{product.label} &middot; {product.sku}</div>
         </div>
       </header>
 

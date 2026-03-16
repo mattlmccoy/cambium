@@ -861,7 +861,7 @@ export function ControlPanel() {
           <div className="mb-1 text-xs uppercase tracking-[0.2em] text-stone-400">
             {product.label} &middot; {product.sku}
           </div>
-          <div className="text-2xl font-light text-stone-900">
+          <div className="font-display text-2xl text-stone-900">
             {product.displayName}
           </div>
           <div className="mt-1 text-sm italic text-stone-500">

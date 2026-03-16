@@ -2,20 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CambiumLogoMark } from "./CambiumLogo";
 
 export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-stone-200/60 bg-white/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-stone-200/60 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         {/* Logo */}
-        <Link href="/" className="flex items-baseline gap-1">
+        <Link href="/" className="flex items-center gap-2">
+          <CambiumLogoMark size={22} color="#44403c" />
           <span className="text-lg font-light tracking-[0.15em] text-stone-900">
             CAMBIUM
-          </span>
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
-            Design
           </span>
         </Link>
 

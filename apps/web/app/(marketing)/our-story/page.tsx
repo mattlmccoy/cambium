@@ -59,7 +59,7 @@ function NetworkSection() {
           </motion.div>
           <motion.h2
             variants={fadeUp}
-            className="mb-8 text-3xl font-light sm:text-4xl"
+            className="font-display mb-8 text-3xl sm:text-4xl"
           >
             10 workshops. 27 species. Your region.
           </motion.h2>
@@ -155,7 +155,7 @@ export default function OurStoryPage() {
           </motion.div>
           <motion.h1
             variants={fadeUp}
-            className="mb-6 text-5xl font-light leading-tight tracking-tight text-stone-900 sm:text-6xl"
+            className="font-display mb-6 text-5xl leading-tight tracking-tight text-stone-900 sm:text-6xl"
           >
             Furniture with roots
           </motion.h1>
@@ -198,7 +198,7 @@ export default function OurStoryPage() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mb-6 text-3xl font-light text-stone-900 sm:text-4xl"
+              className="font-display mb-6 text-3xl text-stone-900 sm:text-4xl"
             >
               Furniture shouldn&apos;t cross an ocean to reach your living room
             </motion.h2>
@@ -281,7 +281,7 @@ export default function OurStoryPage() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mb-12 text-3xl font-light text-stone-900 sm:text-4xl"
+              className="font-display mb-12 text-3xl text-stone-900 sm:text-4xl"
             >
               Four steps to your custom piece
             </motion.h2>
@@ -346,7 +346,7 @@ export default function OurStoryPage() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mb-6 text-3xl font-light text-stone-900 sm:text-4xl"
+              className="font-display mb-6 text-3xl text-stone-900 sm:text-4xl"
             >
               One engineered frame. Infinite wood combinations.
             </motion.h2>
@@ -382,7 +382,7 @@ export default function OurStoryPage() {
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="mb-12 text-3xl font-light text-stone-900 sm:text-4xl"
+              className="font-display mb-12 text-3xl text-stone-900 sm:text-4xl"
             >
               Wood with a story
             </motion.h2>
@@ -434,7 +434,7 @@ export default function OurStoryPage() {
           >
             <motion.h2
               variants={fadeUp}
-              className="mb-4 text-3xl font-light text-stone-900 sm:text-4xl"
+              className="font-display mb-4 text-3xl text-stone-900 sm:text-4xl"
             >
               Ready to design your first piece?
             </motion.h2>
