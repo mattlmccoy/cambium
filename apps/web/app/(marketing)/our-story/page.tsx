@@ -7,7 +7,7 @@ import { REGIONS, WOOD_SPECIES, getSpeciesForRegion } from "@cambium/shared";
 import { ZipEntry } from "@/components/ZipEntry";
 import { CambiumLogoMark } from "@/components/CambiumLogo";
 import { useRegionStore } from "@/lib/region-store";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const CambiumMap = dynamic(
@@ -43,6 +43,15 @@ const stagger = {
 function NetworkSection() {
   const regionId = useRegionStore((s) => s.regionId);
   const isDetected = useRegionStore((s) => s.isDetected);
+  const [focusedHub, setFocusedHub] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Auto-scroll to focused card on mobile / when off-screen
+  useEffect(() => {
+    if (focusedHub && cardRefs.current[focusedHub]) {
+      cardRefs.current[focusedHub]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [focusedHub]);
 
   return (
     <section className="bg-stone-900 px-6 py-24 text-white">
@@ -74,6 +83,7 @@ function NetworkSection() {
           <motion.div variants={fadeIn}>
             <CambiumMap
               userRegionId={isDetected ? regionId : undefined}
+              onFocusChange={setFocusedHub}
             />
           </motion.div>
 
@@ -84,29 +94,45 @@ function NetworkSection() {
           >
             {REGIONS.map((region) => {
               const species = getSpeciesForRegion(region.id);
+              const isFocused = focusedHub === region.id;
+              const regionColor = isFocused
+                ? (REGION_COLORS_MAP[region.id] ?? "rgba(255,255,255,0.2)")
+                : undefined;
+
               return (
                 <motion.div
                   key={region.id}
+                  ref={(el) => { cardRefs.current[region.id] = el; }}
                   variants={fadeUp}
-                  className="rounded-xl border border-white/10 bg-white/5 p-4"
+                  className={`rounded-xl border p-4 transition-all duration-300 ${
+                    isFocused
+                      ? "border-white/30 bg-white/10 ring-1 ring-white/20 scale-[1.03]"
+                      : focusedHub
+                        ? "border-white/5 bg-white/[0.02] opacity-50"
+                        : "border-white/10 bg-white/5"
+                  }`}
+                  style={isFocused ? { borderColor: regionColor } : undefined}
                 >
-                  <div className="mb-1 text-sm font-medium">
+                  <div className={`mb-1 text-sm font-medium transition-colors duration-300 ${isFocused ? "text-white" : ""}`}>
                     {region.city}
                   </div>
-                  <div className="mb-2 text-xs text-white/40">
+                  <div className={`mb-2 text-xs transition-colors duration-300 ${isFocused ? "text-white/60" : "text-white/40"}`}>
                     {region.name}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {species.slice(0, 4).map((s) => (
                       <span
                         key={s.id}
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: s.color }}
+                        className="h-3 w-3 rounded-full transition-opacity duration-300"
+                        style={{
+                          backgroundColor: s.color,
+                          opacity: isFocused ? 1 : focusedHub ? 0.4 : 0.8,
+                        }}
                         title={s.name}
                       />
                     ))}
                     {species.length > 4 && (
-                      <span className="text-[10px] text-white/30">
+                      <span className={`text-[10px] transition-colors duration-300 ${isFocused ? "text-white/50" : "text-white/30"}`}>
                         +{species.length - 4}
                       </span>
                     )}
@@ -120,6 +146,20 @@ function NetworkSection() {
     </section>
   );
 }
+
+// Region colors for card highlight borders (matches CambiumMap)
+const REGION_COLORS_MAP: Record<string, string> = {
+  seattle:     "#c9a87c",
+  sacramento:  "#8c6b53",
+  phoenix:     "#a07058",
+  denver:      "#95a0b0",
+  austin:      "#c09562",
+  minneapolis: "#d4c5a8",
+  chicago:     "#7a6050",
+  pittsburgh:  "#b06850",
+  boston:       "#c8b088",
+  atlanta:     "#c4a868",
+};
 
 // ─── Page ───────────────────────────────────────────────────────
 

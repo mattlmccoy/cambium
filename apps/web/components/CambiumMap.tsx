@@ -70,6 +70,7 @@ interface CambiumMapProps {
   userRegionId?: string;
   userZip?: string;
   compact?: boolean;
+  onFocusChange?: (regionId: string | null) => void;
 }
 
 interface TooltipData {
@@ -80,9 +81,17 @@ interface TooltipData {
 
 // ─── Component ──────────────────────────────────────────────────
 
-export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
+export function CambiumMap({ userRegionId, compact = false, onFocusChange }: CambiumMapProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [focusRegion, setFocusRegion] = useState<string | null>(null);
+  const [focusRegion, _setFocusRegion] = useState<string | null>(null);
+
+  const setFocusRegion = useCallback((updater: string | null | ((prev: string | null) => string | null)) => {
+    _setFocusRegion((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      onFocusChange?.(next);
+      return next;
+    });
+  }, [onFocusChange]);
 
   const userCoords = useMemo(() => {
     if (!userRegionId) return null;
