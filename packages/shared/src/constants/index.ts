@@ -3,6 +3,7 @@ export * from "./products";
 export * from "./regional-pricing";
 export * from "./zip-regions";
 export * from "./stories";
+export * from "./carbon";
 
 // ─── Side Table Parameter Constraints ────────────────────────────
 

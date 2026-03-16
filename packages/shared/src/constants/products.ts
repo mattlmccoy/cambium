@@ -112,6 +112,10 @@ export const PRODUCT_CATALOG: Record<
     slug: "side-table",
     sku: "TB-SD-01",
     label: "Side Table",
+    displayName: "Heartwood",
+    tagline: "The dense core \u2014 small, essential, foundational.",
+    anatomyDescription: "Named for the dense core at a tree\u2019s center. Small but essential, like the piece beside you.",
+    minJanka: 600,
     category: "accent",
     description: "Compact accent table with a fold-flat Core and CNC-cut wood wraps.",
     priceBand: { min: 149, max: 349 },
@@ -139,6 +143,10 @@ export const PRODUCT_CATALOG: Record<
     slug: "table",
     sku: "TB-DN-01",
     label: "Table",
+    displayName: "Slab",
+    tagline: "Every gathering starts around a Slab.",
+    anatomyDescription: "Named for the broad cross-section of a felled tree. A gathering surface, wide and welcoming.",
+    minJanka: 900,
     category: "dining",
     description: "Coffee and dining table modes sharing one fold-flat Core family.",
     modes: [
@@ -176,6 +184,10 @@ export const PRODUCT_CATALOG: Record<
     slug: "chair",
     sku: "CH-DN-01",
     label: "Dining Chair",
+    displayName: "Bough",
+    tagline: "The branch that supports you.",
+    anatomyDescription: "Named for the limb that bears the weight of the canopy. Built to support, shaped for comfort.",
+    minJanka: 1000,
     category: "seating",
     description: "Core-led seating frame with cosmetic wood seat, back, and leg wraps.",
     priceBand: { min: 249, max: 449 },
@@ -203,6 +215,10 @@ export const PRODUCT_CATALOG: Record<
     slug: "shelf",
     sku: "SH-WL-01",
     label: "Shelf",
+    displayName: "Canopy",
+    tagline: "Layers reaching upward, holding what matters.",
+    anatomyDescription: "Named for the topmost layer of the forest. Shelves that reach upward, organizing and displaying.",
+    minJanka: 400,
     category: "storage",
     description: "Wall-mount and free-standing shelf system built around a visible Core.",
     modes: [
@@ -239,3 +255,52 @@ export const PRODUCT_ORDER = [
   PRODUCT_CATALOG.chair,
   PRODUCT_CATALOG.shelf,
 ] as const;
+
+// ─── Wood Suitability ─────────────────────────────────────────────
+
+export type WoodSuitabilityRating = "recommended" | "suitable" | "soft-warning";
+
+export interface WoodSuitability {
+  rating: WoodSuitabilityRating;
+  label: string;
+  description: string;
+}
+
+/**
+ * Evaluate how well a wood species' hardness matches a product's structural needs.
+ * Species are never blocked — this is advisory guidance.
+ */
+export function getWoodSuitability(
+  productSlug: string,
+  jankaHardness: number
+): WoodSuitability {
+  const product = PRODUCT_CATALOG[productSlug as keyof typeof PRODUCT_CATALOG];
+  if (!product) {
+    return { rating: "suitable", label: "Suitable", description: "Good for this use." };
+  }
+
+  const minJanka = product.minJanka;
+  const label = product.label.toLowerCase();
+
+  if (jankaHardness >= minJanka + 300) {
+    return {
+      rating: "recommended",
+      label: "Recommended",
+      description: `Excellent hardness for a ${label}.`,
+    };
+  }
+
+  if (jankaHardness >= minJanka) {
+    return {
+      rating: "suitable",
+      label: "Suitable",
+      description: `Good for this use.`,
+    };
+  }
+
+  return {
+    rating: "soft-warning",
+    label: "Softer than ideal",
+    description: `This wood (Janka ${jankaHardness}) is softer than recommended for a ${label} (${minJanka}+). Consider a harder species for heavy use.`,
+  };
+}

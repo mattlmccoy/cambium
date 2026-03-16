@@ -87,12 +87,68 @@ export const WOOD_SPECIES_PRICES: WoodSpeciesPrice[] = [
   { speciesId: "cypress",            basePrice: 7.00 },   // rot-resistant, coastal
 ];
 
-// ─── Cross-Region Surcharges ────────────────────────────────────
-// When a customer wants wood from a different region, they pay extra
-// for transport logistics. This encourages buying local.
+// ─── Regional Tier System ─────────────────────────────────────────
+// Distance-based pricing tiers that encourage buying local.
+// Closer regions have smaller surcharges; cross-country has the highest.
 
-export const CROSS_REGION_SURCHARGE_PER_BF = 6.00;     // $/bf transport premium
-export const CROSS_REGION_HANDLING_MULTIPLIER = 1.25;   // 25% handling uplift on wood cost
+export interface RegionTier {
+  tier: 0 | 1 | 2 | 3 | 4;
+  label: string;
+  surchargePerBf: number;
+  handlingMultiplier: number;
+  maxDistance: number;       // miles (upper bound for this tier)
+  color: string;             // display color for map rings / badges
+}
+
+export const REGION_TIERS: RegionTier[] = [
+  { tier: 0, label: "Your Region",    surchargePerBf: 0,    handlingMultiplier: 1.00, maxDistance: 0,    color: "#10b981" },
+  { tier: 1, label: "Neighboring",    surchargePerBf: 2.00, handlingMultiplier: 1.10, maxDistance: 600,  color: "#34d399" },
+  { tier: 2, label: "Regional",       surchargePerBf: 4.00, handlingMultiplier: 1.15, maxDistance: 1200, color: "#f59e0b" },
+  { tier: 3, label: "Distant",        surchargePerBf: 6.00, handlingMultiplier: 1.22, maxDistance: 2000, color: "#f97316" },
+  { tier: 4, label: "Cross-Country",  surchargePerBf: 8.50, handlingMultiplier: 1.30, maxDistance: Infinity, color: "#ef4444" },
+];
+
+/** Get the tier for shipping wood between two regions */
+export function getRegionTier(fromRegion: string, toRegion: string): RegionTier {
+  if (fromRegion === toRegion) return REGION_TIERS[0];
+  const distance = getRegionDistance(fromRegion, toRegion);
+  for (const tier of REGION_TIERS) {
+    if (tier.tier === 0) continue;
+    if (distance <= tier.maxDistance) return tier;
+  }
+  return REGION_TIERS[REGION_TIERS.length - 1];
+}
+
+/** Group all regions by their tier relative to the user's region, sorted by tier */
+export function getRegionsGroupedByTier(
+  userRegionId: string,
+  allRegions: readonly { id: string; name: string; city: string; state: string }[]
+): { tier: RegionTier; regions: { id: string; name: string; city: string; state: string; distance: number }[] }[] {
+  const groups = new Map<number, { tier: RegionTier; regions: { id: string; name: string; city: string; state: string; distance: number }[] }>();
+
+  for (const region of allRegions) {
+    if (region.id === userRegionId) continue; // skip the user's own region
+    const tier = getRegionTier(userRegionId, region.id);
+    const distance = getRegionDistance(userRegionId, region.id);
+
+    if (!groups.has(tier.tier)) {
+      groups.set(tier.tier, { tier, regions: [] });
+    }
+    groups.get(tier.tier)!.regions.push({ ...region, distance });
+  }
+
+  // Sort regions within each tier by distance
+  for (const group of groups.values()) {
+    group.regions.sort((a, b) => a.distance - b.distance);
+  }
+
+  // Sort groups by tier number
+  return Array.from(groups.values()).sort((a, b) => a.tier.tier - b.tier.tier);
+}
+
+// Legacy constants (deprecated — use REGION_TIERS instead)
+export const CROSS_REGION_SURCHARGE_PER_BF = 6.00;
+export const CROSS_REGION_HANDLING_MULTIPLIER = 1.25;
 
 // ─── Region Coordinates ────────────────────────────────────────
 // Lat/lng for each microfactory city. Used for distance calculations
@@ -170,23 +226,32 @@ export function getWoodBasePrice(speciesId: string): number {
 
 /**
  * Get the effective price per board foot for a species in a given region.
- * Local species get the base price. Cross-region species get base + surcharge.
+ * Local species get the base price. Cross-region species get tiered surcharges.
  */
 export function getEffectiveWoodPrice(
   speciesId: string,
   speciesRegions: readonly string[],
   userRegionId: string
-): { pricePerBf: number; isLocal: boolean; surcharge: number } {
+): { pricePerBf: number; isLocal: boolean; surcharge: number; tier: RegionTier; sourceRegion: string } {
   const basePrice = getWoodBasePrice(speciesId);
   const isLocal = speciesRegions.includes(userRegionId);
 
   if (isLocal) {
-    return { pricePerBf: basePrice, isLocal: true, surcharge: 0 };
+    return { pricePerBf: basePrice, isLocal: true, surcharge: 0, tier: REGION_TIERS[0], sourceRegion: userRegionId };
   }
 
-  const surcharge = CROSS_REGION_SURCHARGE_PER_BF;
-  const pricePerBf = basePrice * CROSS_REGION_HANDLING_MULTIPLIER + surcharge;
-  return { pricePerBf, isLocal: false, surcharge: pricePerBf - basePrice };
+  // Find the closest region that has this species
+  const sourceRegion = getClosestSourceRegion(speciesRegions, userRegionId);
+  const tier = getRegionTier(sourceRegion, userRegionId);
+
+  const pricePerBf = basePrice * tier.handlingMultiplier + tier.surchargePerBf;
+  return {
+    pricePerBf,
+    isLocal: false,
+    surcharge: pricePerBf - basePrice,
+    tier,
+    sourceRegion,
+  };
 }
 
 /**

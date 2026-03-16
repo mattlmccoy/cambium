@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   ComposableMap,
   Geographies,
   Geography,
   Marker,
-  Line,
 } from "react-simple-maps";
-import { REGIONS, REGION_COORDINATES, getSpeciesForRegion } from "@cambium/shared";
+import { REGIONS, REGION_COORDINATES, getSpeciesForRegion, getRegionDistance, REGION_TIERS, getRegionTier } from "@cambium/shared";
 
 // ─── FIPS code to state abbreviation ────────────────────────────
 
@@ -56,6 +55,10 @@ function buildStateToRegionMap(): Record<string, string> {
 const STATE_TO_REGION = buildStateToRegionMap();
 const GEO_URL = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
 
+// Approximate conversion: miles to SVG units for the AlbersUSA projection
+// The US is roughly 2,800 miles wide and the map is 800 SVG units
+const MILES_TO_SVG = 800 / 2800;
+
 // ─── Types ──────────────────────────────────────────────────────
 
 interface CambiumMapProps {
@@ -74,6 +77,7 @@ interface TooltipData {
 
 export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [focusRegion, setFocusRegion] = useState<string | null>(null);
 
   const userCoords = useMemo(() => {
     if (!userRegionId) return null;
@@ -82,13 +86,39 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
     return [coords.lng, coords.lat] as [number, number];
   }, [userRegionId]);
 
+  // Tier distances for ring visualization (exclude Tier 0)
+  const tierRings = useMemo(() => {
+    return REGION_TIERS.filter((t) => t.tier > 0 && t.maxDistance < Infinity);
+  }, []);
+
+  // Calculate tier for each region relative to focus
+  const regionTiers = useMemo(() => {
+    if (!focusRegion) return {};
+    const tiers: Record<string, typeof REGION_TIERS[0]> = {};
+    for (const region of REGIONS) {
+      if (region.id !== focusRegion) {
+        tiers[region.id] = getRegionTier(focusRegion, region.id);
+      }
+    }
+    return tiers;
+  }, [focusRegion]);
+
+  const handleMarkerClick = useCallback((regionId: string) => {
+    setFocusRegion((prev) => (prev === regionId ? null : regionId));
+  }, []);
+
+  const scale = compact ? 800 : 1000;
+  const mapWidth = compact ? 600 : 800;
+  const mapHeight = compact ? 400 : 500;
+  const milesToSvg = mapWidth / 2800;
+
   return (
     <div className={`relative ${compact ? "" : "mx-auto max-w-4xl"}`}>
       <ComposableMap
         projection="geoAlbersUsa"
-        projectionConfig={{ scale: compact ? 800 : 1000 }}
-        width={compact ? 600 : 800}
-        height={compact ? 400 : 500}
+        projectionConfig={{ scale }}
+        width={mapWidth}
+        height={mapHeight}
         style={{ width: "100%", height: "auto" }}
       >
         <Geographies geography={GEO_URL}>
@@ -120,11 +150,54 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           }
         </Geographies>
 
+        {/* Tier rings when a region is focused */}
+        {focusRegion && (() => {
+          const focusCoords = REGION_COORDINATES[focusRegion];
+          if (!focusCoords) return null;
+          return (
+            <Marker coordinates={[focusCoords.lng, focusCoords.lat]}>
+              {tierRings.map((tier) => {
+                const radius = tier.maxDistance * milesToSvg;
+                return (
+                  <g key={tier.tier}>
+                    <circle
+                      r={radius}
+                      fill={tier.color}
+                      fillOpacity={0.06}
+                      stroke={tier.color}
+                      strokeWidth={1}
+                      strokeOpacity={0.4}
+                      strokeDasharray="4 3"
+                    />
+                    {/* Tier label at top of ring */}
+                    <text
+                      y={-radius - 4}
+                      textAnchor="middle"
+                      style={{
+                        fontSize: 7,
+                        fontWeight: 500,
+                        fill: tier.color,
+                        fontFamily: "system-ui, sans-serif",
+                      }}
+                    >
+                      {tier.label} +${tier.surchargePerBf}/bf
+                    </text>
+                  </g>
+                );
+              })}
+            </Marker>
+          );
+        })()}
+
         {/* Microfactory markers */}
         {REGIONS.map((region) => {
           const coords = REGION_COORDINATES[region.id];
           if (!coords) return null;
           const isUser = region.id === userRegionId;
+          const isFocus = region.id === focusRegion;
+          const tier = regionTiers[region.id];
+          const tierColor = tier?.color;
+
           return (
             <Marker
               key={region.id}
@@ -140,21 +213,34 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
                 }
               }}
               onMouseLeave={() => setTooltip(null)}
+              onClick={() => handleMarkerClick(region.id)}
             >
+              {/* Tier highlight ring when focus is active */}
+              {focusRegion && tier && (
+                <circle
+                  r={8}
+                  fill={tierColor}
+                  fillOpacity={0.25}
+                  stroke={tierColor}
+                  strokeWidth={1}
+                  strokeOpacity={0.5}
+                />
+              )}
               <circle
-                r={isUser ? 6 : 4}
-                fill={isUser ? "#f59e0b" : "#ffffff"}
-                stroke={isUser ? "#92400e" : "#374151"}
-                strokeWidth={isUser ? 2 : 1.5}
+                r={isFocus ? 7 : isUser ? 6 : 4}
+                fill={isFocus ? "#f59e0b" : isUser ? "#f59e0b" : focusRegion && tier ? tierColor ?? "#ffffff" : "#ffffff"}
+                stroke={isFocus ? "#92400e" : isUser ? "#92400e" : "#374151"}
+                strokeWidth={isFocus ? 2.5 : isUser ? 2 : 1.5}
+                style={{ cursor: "pointer" }}
               />
               {!compact && (
                 <text
                   textAnchor="middle"
                   y={-10}
                   style={{
-                    fontSize: isUser ? 10 : 8,
-                    fontWeight: isUser ? 600 : 400,
-                    fill: isUser ? "#1f2937" : "#6b7280",
+                    fontSize: isFocus || isUser ? 10 : 8,
+                    fontWeight: isFocus || isUser ? 600 : 400,
+                    fill: isFocus ? "#92400e" : isUser ? "#1f2937" : "#6b7280",
                     fontFamily: "system-ui, sans-serif",
                   }}
                 >
@@ -165,18 +251,55 @@ export function CambiumMap({ userRegionId, compact = false }: CambiumMapProps) {
           );
         })}
 
-        {/* Arc from user region (if detected) to show connection */}
-        {userCoords && userRegionId && (
+        {/* Arc from user region (if detected) */}
+        {userCoords && userRegionId && !focusRegion && (
           <Marker coordinates={userCoords}>
             <circle r={8} fill="#f59e0b" fillOpacity={0.3} />
           </Marker>
         )}
       </ComposableMap>
 
+      {/* Focus info bar */}
+      {focusRegion && (
+        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-lg bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
+          <div className="flex-1">
+            <div className="text-xs font-medium text-stone-900">
+              {REGIONS.find((r) => r.id === focusRegion)?.name} tiers
+            </div>
+            <div className="mt-1 flex gap-3">
+              {REGION_TIERS.filter((t) => t.tier > 0).map((tier) => (
+                <div key={tier.tier} className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tier.color }} />
+                  <span className="text-[10px] text-stone-500">
+                    {tier.label} +${tier.surchargePerBf}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => setFocusRegion(null)}
+            className="rounded-md border border-stone-200 px-2 py-1 text-[10px] text-stone-500 hover:bg-stone-50"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Tooltip */}
-      {tooltip && (
+      {tooltip && !focusRegion && (
         <MapTooltip
           regionId={tooltip.regionId}
+          x={tooltip.x}
+          y={tooltip.y}
+        />
+      )}
+
+      {/* Tier tooltip when focused */}
+      {tooltip && focusRegion && tooltip.regionId !== focusRegion && (
+        <TierTooltip
+          fromRegion={focusRegion}
+          toRegion={tooltip.regionId}
           x={tooltip.x}
           y={tooltip.y}
         />
@@ -232,6 +355,57 @@ function MapTooltip({
             <span className="text-[10px] text-stone-600">{s.name}</span>
           </div>
         ))}
+      </div>
+      <div className="mt-2 text-[10px] text-stone-400">
+        Click to show pricing tiers
+      </div>
+    </div>
+  );
+}
+
+// ─── Tier Tooltip ───────────────────────────────────────────────
+
+function TierTooltip({
+  fromRegion,
+  toRegion,
+  x,
+  y,
+}: {
+  fromRegion: string;
+  toRegion: string;
+  x: number;
+  y: number;
+}) {
+  const from = REGIONS.find((r) => r.id === fromRegion);
+  const to = REGIONS.find((r) => r.id === toRegion);
+  const tier = getRegionTier(fromRegion, toRegion);
+  const distance = getRegionDistance(fromRegion, toRegion);
+
+  if (!from || !to) return null;
+
+  return (
+    <div
+      className="pointer-events-none absolute z-50 rounded-xl border bg-white p-4 shadow-lg"
+      style={{
+        left: x + 12,
+        top: y - 20,
+        maxWidth: 240,
+        borderColor: tier.color,
+      }}
+    >
+      <div className="mb-1 flex items-center gap-2">
+        <span className="text-sm font-medium text-stone-900">{to.name}</span>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+          style={{ backgroundColor: tier.color }}
+        >
+          {tier.label}
+        </span>
+      </div>
+      <div className="space-y-0.5 text-[11px] text-stone-500">
+        <div>~{distance} miles from {from.city}</div>
+        <div>+${tier.surchargePerBf.toFixed(2)}/bf surcharge</div>
+        <div>{Math.round(tier.handlingMultiplier * 100 - 100)}% handling uplift</div>
       </div>
     </div>
   );

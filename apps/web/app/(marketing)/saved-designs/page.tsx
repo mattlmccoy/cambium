@@ -79,7 +79,7 @@ export default function SavedDesignsPage() {
                   {design.name}
                 </div>
                 <div className="mb-1 text-xs text-stone-500">
-                  {product?.label ?? design.productSlug}
+                  {product?.displayName ?? design.productSlug} ({product?.label})
                 </div>
                 <div className="mb-3 text-xs text-stone-400">
                   {species?.name} &middot; {design.params.finish} &middot; $

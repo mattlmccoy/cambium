@@ -94,8 +94,8 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
           </span>
         </Link>
         <div className="text-right">
-          <div className="text-sm font-medium text-stone-900">{product.label}</div>
-          <div className="text-xs text-stone-500">{product.sku}</div>
+          <div className="text-sm font-medium text-stone-900">{product.displayName}</div>
+          <div className="text-xs text-stone-500">{product.label} &middot; {product.sku}</div>
         </div>
       </header>
 

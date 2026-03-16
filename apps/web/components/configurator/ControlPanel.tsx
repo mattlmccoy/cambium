@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useConfiguratorStore } from "@/lib/configurator-store";
 import { useRegionStore } from "@/lib/region-store";
 import { useBenchStore } from "@/lib/bench-store";
 import { useSavedDesignsStore } from "@/lib/saved-designs-store";
+import { CrossRegionDrawer } from "./CrossRegionDrawer";
 import {
   FINISHES,
   REGIONS,
@@ -14,10 +15,15 @@ import {
   getSpeciesForRegion,
   getEffectiveWoodPrice,
   getRegionDistance,
-  getClosestSourceRegion,
+  getWoodSuitability,
+  SPECIES_STORIES,
+  estimateCarbonFootprint,
+  getSpeciesById,
+  REGION_COORDINATES,
 } from "@cambium/shared";
 import type {
   AnyProductParams,
+  BOMResult,
   ChairBackStyle,
   ChairParams,
   CoreVisibility,
@@ -405,7 +411,7 @@ function RegionDisplay() {
           </div>
           <div className="text-xs text-stone-500">
             {region.city}, {region.state}
-            {zip && <span className="ml-1">· ZIP {zip}</span>}
+            {zip && <span className="ml-1">&middot; ZIP {zip}</span>}
           </div>
         </div>
         <Link
@@ -419,93 +425,57 @@ function RegionDisplay() {
   );
 }
 
-// ─── Wood Species Selector ──────────────────────────────────────
+// ─── Wood Species Selector (local only + drawer trigger) ─────────
 
 function WoodSpeciesSelector({
   regionId,
+  productSlug,
   selectedSpecies,
   onSelect,
 }: {
   regionId: string;
+  productSlug: string;
   selectedSpecies: string;
   onSelect: (speciesId: string) => void;
 }) {
-  const [pendingSpecies, setPendingSpecies] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const localSpecies = getSpeciesForRegion(regionId);
-  const localIds = new Set(localSpecies.map((s) => s.id));
+  const localIds = new Set<string>(localSpecies.map((s) => s.id));
 
-  // Cross-region species: all species NOT local to this region
-  const crossRegionSpecies = WOOD_SPECIES.filter(
-    (s) => !localIds.has(s.id)
-  );
+  // Count cross-region species
+  const crossRegionCount = WOOD_SPECIES.filter((s) => !localIds.has(s.id as string)).length;
 
-  const handleCrossRegionClick = (speciesId: string) => {
-    if (selectedSpecies === speciesId) return; // already selected
-    setPendingSpecies(speciesId);
-  };
-
-  const confirmCrossRegion = () => {
-    if (pendingSpecies) {
-      onSelect(pendingSpecies);
-      setPendingSpecies(null);
-    }
-  };
-
-  const cancelCrossRegion = () => {
-    setPendingSpecies(null);
-  };
-
-  // Get info for the pending species (for the confirmation banner)
-  const pendingInfo = pendingSpecies
-    ? (() => {
-        const species = WOOD_SPECIES.find((s) => s.id === pendingSpecies);
-        if (!species) return null;
-        const sourceRegion = getClosestSourceRegion(
-          species.regions as unknown as readonly string[],
-          regionId
-        );
-        const sourceRegionData = REGIONS.find((r) => r.id === sourceRegion);
-        const pricing = getEffectiveWoodPrice(
-          species.id,
-          species.regions as unknown as readonly string[],
-          regionId
-        );
-        const distance = getRegionDistance(regionId, sourceRegion);
-        return { species, sourceRegionData, pricing, distance };
-      })()
+  // Check if currently selected species is cross-region
+  const selectedIsLocal = localIds.has(selectedSpecies);
+  const selectedSpeciesData = WOOD_SPECIES.find((s) => s.id === selectedSpecies);
+  const selectedPricing = selectedSpeciesData
+    ? getEffectiveWoodPrice(
+        selectedSpeciesData.id,
+        selectedSpeciesData.regions as unknown as readonly string[],
+        regionId
+      )
     : null;
+
+  // Selected species story
+  const selectedStory = SPECIES_STORIES[selectedSpecies];
+
+  // Suitability warning for selected soft wood
+  const selectedSuitability = selectedSpeciesData
+    ? getWoodSuitability(productSlug, selectedSpeciesData.hardness)
+    : null;
+
+  // Find top 2 recommended local hardwoods for warning message
+  const recommendedLocalWoods = useMemo(() => {
+    if (!selectedSuitability || selectedSuitability.rating !== "soft-warning") return [];
+    const product = useConfiguratorStore.getState().product;
+    return localSpecies
+      .filter((s) => s.hardness >= product.minJanka + 300)
+      .sort((a, b) => b.hardness - a.hardness)
+      .slice(0, 2);
+  }, [selectedSuitability, localSpecies, productSlug]);
 
   return (
     <div className="space-y-3">
-      {/* Confirmation banner for cross-region selection */}
-      {pendingInfo && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-          <div className="mb-2 text-xs font-medium text-red-800">
-            This wood ships from {pendingInfo.sourceRegionData?.name ?? "another region"}
-          </div>
-          <div className="mb-2 space-y-1 text-[11px] text-red-700">
-            <div>
-              +${pendingInfo.pricing.surcharge.toFixed(2)}/bf sustainability surcharge
-            </div>
-            <div>~{pendingInfo.distance} extra miles of transport</div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={confirmCrossRegion}
-              className="rounded-md bg-red-700 px-3 py-1 text-[11px] font-medium text-white transition-colors hover:bg-red-800"
-            >
-              Confirm Selection
-            </button>
-            <button
-              onClick={cancelCrossRegion}
-              className="rounded-md border border-red-200 px-3 py-1 text-[11px] text-red-700 transition-colors hover:bg-red-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Local species */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -521,15 +491,14 @@ function WoodSpeciesSelector({
               species.regions as unknown as readonly string[],
               regionId
             );
+            const suitability = getWoodSuitability(productSlug, species.hardness);
+            const isSelected = selectedSpecies === species.id;
             return (
               <button
                 key={species.id}
-                onClick={() => {
-                  setPendingSpecies(null);
-                  onSelect(species.id);
-                }}
+                onClick={() => onSelect(species.id)}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                  selectedSpecies === species.id
+                  isSelected
                     ? "border-stone-900 bg-stone-900 text-white"
                     : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
                 }`}
@@ -539,10 +508,18 @@ function WoodSpeciesSelector({
                   style={{ backgroundColor: species.color }}
                 />
                 <span className="truncate">{species.name}</span>
+                {suitability.rating === "recommended" && (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" title="Recommended" />
+                )}
+                {suitability.rating === "soft-warning" && (
+                  <span className={`shrink-0 text-[9px] ${isSelected ? "text-amber-300" : "text-amber-500"}`} title={suitability.description}>
+                    &#9888;
+                  </span>
+                )}
                 <span className={`ml-auto text-[10px] ${
-                  selectedSpecies === species.id ? "text-white/60" : "text-stone-400"
+                  isSelected ? "text-white/60" : "text-stone-400"
                 }`}>
-                  ${pricing.pricePerBf.toFixed(2)}/bf
+                  ${pricing.pricePerBf.toFixed(2)}
                 </span>
               </button>
             );
@@ -550,60 +527,130 @@ function WoodSpeciesSelector({
         </div>
       </div>
 
-      {/* Cross-region species */}
-      {crossRegionSpecies.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-stone-600">Other Regions</span>
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
-              +Surcharge
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {crossRegionSpecies.map((species) => {
-              const pricing = getEffectiveWoodPrice(
-                species.id,
-                species.regions as unknown as readonly string[],
-                regionId
-              );
-              const sourceRegion = getClosestSourceRegion(
-                species.regions as unknown as readonly string[],
-                regionId
-              );
-              const distance = getRegionDistance(regionId, sourceRegion);
-              const isSelected = selectedSpecies === species.id;
-              const isPending = pendingSpecies === species.id;
-              return (
-                <button
-                  key={species.id}
-                  onClick={() => handleCrossRegionClick(species.id)}
-                  className={`relative flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                    isSelected
-                      ? "border-stone-900 bg-stone-900 text-white"
-                      : isPending
-                        ? "border-red-400 bg-red-50 text-red-900"
-                        : "border-stone-200 bg-white text-stone-700 hover:border-red-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: species.color }}
-                    />
-                    <span className="truncate">{species.name}</span>
-                  </div>
-                  <div className={`flex items-center justify-between text-[10px] ${
-                    isSelected ? "text-white/60" : "text-red-500"
-                  }`}>
-                    <span>${pricing.pricePerBf.toFixed(2)}/bf</span>
-                    <span>~{distance}mi</span>
-                  </div>
-                </button>
-              );
-            })}
+      {/* Suitability warning for soft wood */}
+      {selectedSuitability?.rating === "soft-warning" && selectedSpeciesData && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="flex items-start gap-2 text-[11px] text-amber-800">
+            <span className="mt-0.5 shrink-0">&#9888;</span>
+            <div>
+              <span className="font-medium">{selectedSpeciesData.name}</span> (Janka {selectedSpeciesData.hardness}) is softer than recommended for this piece.
+              {recommendedLocalWoods.length > 0 && (
+                <span>
+                  {" "}Consider {recommendedLocalWoods.map((w) => w.name).join(" or ")} for heavy use.
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Selected species story snippet */}
+      {selectedStory && selectedIsLocal && (
+        <div className="rounded-lg bg-stone-50 px-3 py-2">
+          <p className="text-[11px] leading-relaxed text-stone-500">
+            {selectedStory.character.split(".")[0]}.
+          </p>
+        </div>
+      )}
+
+      {/* Cross-region link + status */}
+      {!selectedIsLocal && selectedPricing && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-amber-800">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: selectedPricing.tier.color }}
+            />
+            <span className="font-medium">
+              {selectedSpeciesData?.name}
+            </span>
+            <span className="ml-auto text-[10px]">
+              {selectedPricing.tier.label} &middot; +${selectedPricing.surcharge.toFixed(2)}/bf
+            </span>
+          </div>
+        </div>
+      )}
+
+      {crossRegionCount > 0 && (
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="w-full text-left text-xs text-stone-400 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-600"
+        >
+          Browse all {crossRegionCount} species from other regions &rarr;
+        </button>
+      )}
+
+      <CrossRegionDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        regionId={regionId}
+        productSlug={productSlug as any}
+        selectedSpecies={selectedSpecies}
+        onSelect={onSelect}
+      />
+    </div>
+  );
+}
+
+// ─── Carbon Footprint Badge ──────────────────────────────────────
+
+function CarbonBadge({
+  bom,
+  speciesId,
+  regionId,
+}: {
+  bom: BOMResult;
+  speciesId: string;
+  regionId: string;
+}) {
+  const species = getSpeciesById(speciesId);
+  if (!species || bom.totalBoardFeet <= 0) return null;
+
+  // Calculate local distance (mill → workshop → customer, approx 200km)
+  const localDistanceKm = 200;
+
+  const carbon = estimateCarbonFootprint(
+    bom.totalBoardFeet,
+    species.density,
+    localDistanceKm
+  );
+
+  if (carbon.importedCO2Kg <= 0) return null;
+
+  const localBarWidth = Math.max(
+    5,
+    (carbon.localCO2Kg / carbon.importedCO2Kg) * 100
+  );
+
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+      <div className="mb-2 flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 17 3.5s1 5 .8 10" />
+          <path d="M11 20H6" />
+          <path d="M11 20v-4" />
+        </svg>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
+          Carbon Footprint
+        </span>
+      </div>
+      <div className="mb-2 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${localBarWidth}%` }} />
+          <span className="text-[10px] text-emerald-700">
+            Local: {carbon.localCO2Kg.toFixed(1)} kg CO2
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-full rounded-full bg-stone-300" />
+          <span className="text-[10px] text-stone-500">
+            Import: {carbon.importedCO2Kg.toFixed(1)} kg CO2
+          </span>
+        </div>
+      </div>
+      <div className="text-[11px] font-medium text-emerald-700">
+        {carbon.savingsPercent}% less carbon than imported furniture
+      </div>
     </div>
   );
 }
@@ -614,11 +661,13 @@ function PriceFooter({
   product,
   params,
   cost,
+  bom,
   resetParams,
 }: {
   product: ProductDefinition;
   params: AnyProductParams;
   cost: { total: number; isLocalWood: boolean; crossRegionSurcharge: number };
+  bom: BOMResult;
   resetParams: () => void;
 }) {
   const addToBench = useBenchStore((s) => s.addItem);
@@ -648,14 +697,14 @@ function PriceFooter({
   };
 
   const handleSave = () => {
-    const defaultName = `${product.label} - ${species?.name ?? params.woodSpecies} - ${new Date().toLocaleDateString()}`;
+    const defaultName = `${product.displayName} - ${species?.name ?? params.woodSpecies} - ${new Date().toLocaleDateString()}`;
     setDesignName(defaultName);
     setShowSaveDialog(true);
   };
 
   const confirmSave = () => {
     saveDesign({
-      name: designName || `${product.label} design`,
+      name: designName || `${product.displayName} design`,
       productSlug: params.productSlug,
       params,
       cost: cost.total,
@@ -697,6 +746,15 @@ function PriceFooter({
         </div>
       )}
 
+      {/* Carbon footprint */}
+      <div className="mb-4">
+        <CarbonBadge
+          bom={bom}
+          speciesId={params.woodSpecies}
+          regionId={params.regionId}
+        />
+      </div>
+
       {/* Price */}
       <div className="mb-1 flex items-baseline justify-between">
         <span className="text-sm text-stone-500">Estimated Price</span>
@@ -706,16 +764,16 @@ function PriceFooter({
       </div>
       {!cost.isLocalWood && cost.crossRegionSurcharge > 0 && (
         <div className="mb-2 rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-700">
-          Includes ${cost.crossRegionSurcharge.toFixed(2)} cross-region sustainability surcharge
+          Includes ${cost.crossRegionSurcharge.toFixed(2)} cross-region tier surcharge
         </div>
       )}
       {cost.isLocalWood && (
         <div className="mb-2 rounded-md bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
-          Using locally-sourced wood — best value
+          Using locally-sourced wood &mdash; best value
         </div>
       )}
       <div className="mb-4 text-xs text-stone-500">
-        Target ${product.priceBand.min} – ${product.priceBand.max}
+        Target ${product.priceBand.min} &ndash; ${product.priceBand.max}
       </div>
 
       {/* Action buttons */}
@@ -729,7 +787,7 @@ function PriceFooter({
           }`}
         >
           {benchAdded ? (
-            "✓ Added to Bench!"
+            "Added to Bench!"
           ) : (
             <>
               <svg
@@ -790,6 +848,7 @@ export function ControlPanel() {
   const product = useConfiguratorStore((s) => s.product);
   const params = useConfiguratorStore((s) => s.params);
   const cost = useConfiguratorStore((s) => s.cost);
+  const bom = useConfiguratorStore((s) => s.bom);
   const validation = useConfiguratorStore((s) => s.validation);
   const setParam = useConfiguratorStore((s) => s.setParam);
   const resetParams = useConfiguratorStore((s) => s.resetParams);
@@ -797,16 +856,16 @@ export function ControlPanel() {
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="flex-1 space-y-6 p-6">
-        {/* Product header */}
+        {/* Product header with tree anatomy name */}
         <div className="rounded-2xl bg-stone-100 p-4">
-          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-stone-500">
-            {product.sku}
+          <div className="mb-1 text-xs uppercase tracking-[0.2em] text-stone-400">
+            {product.label} &middot; {product.sku}
           </div>
-          <div className="text-xl font-light text-stone-900">
-            {product.label}
+          <div className="text-2xl font-light text-stone-900">
+            {product.displayName}
           </div>
-          <div className="mt-2 text-sm text-stone-600">
-            {product.description}
+          <div className="mt-1 text-sm italic text-stone-500">
+            {product.tagline}
           </div>
         </div>
 
@@ -875,6 +934,7 @@ export function ControlPanel() {
         <Section title="Material">
           <WoodSpeciesSelector
             regionId={params.regionId}
+            productSlug={params.productSlug}
             selectedSpecies={params.woodSpecies}
             onSelect={(id) => setParam("woodSpecies", id)}
           />
@@ -909,6 +969,7 @@ export function ControlPanel() {
         product={product}
         params={params}
         cost={cost}
+        bom={bom}
         resetParams={resetParams}
       />
     </div>

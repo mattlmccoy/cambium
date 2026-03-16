@@ -134,6 +134,14 @@ export interface ProductDefinition<TParams extends AnyProductParams = AnyProduct
   slug: ProductSlug;
   sku: string;
   label: string;
+  /** Tree-anatomy display name (e.g., "Heartwood", "Slab") */
+  displayName: string;
+  /** Short tagline for the product */
+  tagline: string;
+  /** Longer description tying the product to its tree-anatomy namesake */
+  anatomyDescription: string;
+  /** Minimum Janka hardness recommended for this product type */
+  minJanka: number;
   category: ProductCategory;
   description: string;
   modes?: { id: string; label: string }[];

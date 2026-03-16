@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES, getSpeciesForRegion, REGION_STORIES, SPECIES_STORIES, getCheapestLocalSpecies, getEffectiveWoodPrice } from "@cambium/shared";
+import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES, getSpeciesForRegion, REGION_STORIES, SPECIES_STORIES, getCheapestLocalSpecies, getEffectiveWoodPrice, getWoodSuitability } from "@cambium/shared";
 import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
 import { useRegionStore } from "@/lib/region-store";
 import { ZipEntry } from "@/components/ZipEntry";
@@ -184,6 +184,13 @@ export default function Home() {
             {PRODUCT_ORDER.map((product, index) => {
               const startingPrice = prices[product.slug];
 
+              // Find top recommended local woods for this product
+              const localSpecies = getSpeciesForRegion(regionId);
+              const bestWoods = localSpecies
+                .filter((s) => getWoodSuitability(product.slug, s.hardness).rating === "recommended")
+                .sort((a, b) => b.hardness - a.hardness)
+                .slice(0, 2);
+
               return (
                 <Link
                   key={product.slug}
@@ -191,32 +198,43 @@ export default function Home() {
                   className="group overflow-hidden rounded-[28px] border border-white/50 bg-white/60 shadow-[0_24px_60px_rgba(66,44,22,0.12)] backdrop-blur transition-shadow hover:shadow-[0_24px_60px_rgba(66,44,22,0.2)]"
                 >
                   <div
-                    className={`h-48 bg-gradient-to-br ${CARD_STYLES[index]} p-6 text-white`}
+                    className={`h-52 bg-gradient-to-br ${CARD_STYLES[index]} p-6 text-white`}
                   >
                     <div className="flex h-full flex-col justify-between">
                       <span className="text-xs uppercase tracking-[0.25em] text-white/70">
-                        {product.sku}
+                        {product.label}
                       </span>
                       <div>
-                        <div className="mb-2 text-3xl font-light">
-                          {product.label}
+                        <div className="mb-1 text-3xl font-light">
+                          {product.displayName}
                         </div>
-                        <div className="text-sm text-white/75">
-                          {product.description}
+                        <div className="text-sm italic text-white/65">
+                          {product.tagline}
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-4 p-6">
-                    <div className="text-sm text-stone-600">
-                      {product.core.summary}
+                  <div className="space-y-3 p-6">
+                    <div className="text-sm leading-relaxed text-stone-600">
+                      {product.anatomyDescription}
                     </div>
+                    {isDetected && bestWoods.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-emerald-700">
+                        <span className="font-medium">Best local woods:</span>
+                        {bestWoods.map((w) => (
+                          <span key={w.id} className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} />
+                            {w.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-stone-900">
-                        {startingPrice ? `From $${startingPrice}` : `$${product.priceBand.min} – $${product.priceBand.max}`}
+                        {startingPrice ? `From $${startingPrice}` : `$${product.priceBand.min} \u2013 $${product.priceBand.max}`}
                       </span>
                       <span className="text-stone-400 transition-transform group-hover:translate-x-1">
-                        Design yours →
+                        Design yours &rarr;
                       </span>
                     </div>
                   </div>

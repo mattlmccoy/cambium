@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useBenchStore } from "@/lib/bench-store";
-import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES } from "@cambium/shared";
+import { PRODUCT_ORDER, PRODUCT_CATALOG, REGIONS, WOOD_SPECIES } from "@cambium/shared";
 
 export default function BenchPage() {
   const items = useBenchStore((s) => s.items);
@@ -79,11 +79,14 @@ export default function BenchPage() {
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center gap-2">
                   <span className="font-medium text-stone-900">
-                    {product?.label ?? item.productSlug}
+                    {product?.displayName ?? item.productSlug}
+                  </span>
+                  <span className="text-xs text-stone-400">
+                    {product?.label}
                   </span>
                   {item.designName && (
                     <span className="text-xs text-stone-400">
-                      &ldquo;{item.designName}&rdquo;
+                      &middot; &ldquo;{item.designName}&rdquo;
                     </span>
                   )}
                 </div>

@@ -67,7 +67,7 @@ function NetworkSection() {
             variants={fadeUp}
             className="mb-12 text-sm text-white/50"
           >
-            Hover over a workshop to see its local wood species.
+            Click a workshop to see its pricing tiers. Hover to view local wood species.
           </motion.p>
 
           <motion.div variants={fadeIn}>
