@@ -276,6 +276,26 @@ export interface RegionWoodSpecies {
   availability: "high" | "medium" | "low";
 }
 
+// ─── Shipping Validation Types ───────────────────────────────────
+// Groundwork for future shipping address verification against the
+// order's configured region. Will be used during checkout to flag
+// address / region mismatches.
+
+export interface ShippingValidation {
+  /** The region the furniture was configured in */
+  configuredRegionId: string;
+  /** The region derived from the shipping address */
+  shippingRegionId: string | null;
+  /** Whether the shipping address matches the configured region */
+  isMatch: boolean;
+  /** Distance in miles between configured and shipping regions */
+  distanceMiles: number;
+  /** Warning level for the user */
+  severity: "ok" | "warning" | "error";
+  /** Human-readable message */
+  message: string;
+}
+
 // ─── Order Types ─────────────────────────────────────────────────
 
 export type OrderStatus =

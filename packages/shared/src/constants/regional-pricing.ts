@@ -91,8 +91,68 @@ export const WOOD_SPECIES_PRICES: WoodSpeciesPrice[] = [
 // When a customer wants wood from a different region, they pay extra
 // for transport logistics. This encourages buying local.
 
-export const CROSS_REGION_SURCHARGE_PER_BF = 3.50;     // $/bf transport premium
-export const CROSS_REGION_HANDLING_MULTIPLIER = 1.15;   // 15% handling uplift on wood cost
+export const CROSS_REGION_SURCHARGE_PER_BF = 6.00;     // $/bf transport premium
+export const CROSS_REGION_HANDLING_MULTIPLIER = 1.25;   // 25% handling uplift on wood cost
+
+// ─── Region Coordinates ────────────────────────────────────────
+// Lat/lng for each microfactory city. Used for distance calculations
+// to show users how far cross-region wood must travel.
+
+export const REGION_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  seattle:      { lat: 47.6062, lng: -122.3321 },
+  sacramento:   { lat: 38.5816, lng: -121.4944 },
+  phoenix:      { lat: 33.4484, lng: -112.0740 },
+  denver:       { lat: 39.7392, lng: -104.9903 },
+  austin:       { lat: 30.2672, lng: -97.7431  },
+  minneapolis:  { lat: 44.9778, lng: -93.2650  },
+  chicago:      { lat: 41.8781, lng: -87.6298  },
+  pittsburgh:   { lat: 40.4406, lng: -79.9959  },
+  boston:        { lat: 42.3601, lng: -71.0589  },
+  atlanta:      { lat: 33.7490, lng: -84.3880  },
+};
+
+/**
+ * Calculate the distance in miles between two regions using the haversine formula.
+ */
+export function getRegionDistance(regionA: string, regionB: string): number {
+  const a = REGION_COORDINATES[regionA];
+  const b = REGION_COORDINATES[regionB];
+  if (!a || !b) return 0;
+
+  const R = 3959; // Earth radius in miles
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      sinLng * sinLng;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
+}
+
+/**
+ * Find the closest source region for a species relative to the user's region.
+ */
+export function getClosestSourceRegion(
+  speciesRegions: readonly string[],
+  userRegionId: string
+): string {
+  if (speciesRegions.length === 0) return userRegionId;
+  if (speciesRegions.includes(userRegionId)) return userRegionId;
+
+  let closest = speciesRegions[0];
+  let closestDist = getRegionDistance(userRegionId, closest);
+  for (let i = 1; i < speciesRegions.length; i++) {
+    const dist = getRegionDistance(userRegionId, speciesRegions[i]);
+    if (dist < closestDist) {
+      closest = speciesRegions[i];
+      closestDist = dist;
+    }
+  }
+  return closest;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────
 

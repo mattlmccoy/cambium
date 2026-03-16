@@ -3,9 +3,12 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { ControlPanel } from "@/components/configurator/ControlPanel";
 import { useConfiguratorStore } from "@/lib/configurator-store";
 import { useRegionStore } from "@/lib/region-store";
+import { useBenchStore } from "@/lib/bench-store";
+import { useSavedDesignsStore } from "@/lib/saved-designs-store";
 import { isProductSlug } from "@cambium/shared";
 
 const ConfiguratorScene = dynamic(
@@ -26,19 +29,42 @@ function SceneLoading() {
 
 export default function ConfigureClient({ productSlug }: { productSlug: string }) {
   const setProduct = useConfiguratorStore((state) => state.setProduct);
+  const setParams = useConfiguratorStore((state) => state.setParams);
   const product = useConfiguratorStore((state) => state.product);
   const regionId = useRegionStore((state) => state.regionId);
   const hydrate = useRegionStore((state) => state.hydrate);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     hydrate();
+    useBenchStore.getState().hydrate();
+    useSavedDesignsStore.getState().hydrate();
   }, [hydrate]);
 
+  // Load product with region
   useEffect(() => {
     if (productSlug && isProductSlug(productSlug)) {
       setProduct(productSlug, regionId);
     }
   }, [productSlug, setProduct, regionId]);
+
+  // Load from bench item or saved design via query params
+  useEffect(() => {
+    const benchId = searchParams.get("loadBench");
+    const designId = searchParams.get("loadDesign");
+
+    if (benchId) {
+      const item = useBenchStore.getState().items.find((i) => i.id === benchId);
+      if (item) {
+        setParams(item.params);
+      }
+    } else if (designId) {
+      const design = useSavedDesignsStore.getState().designs.find((d) => d.id === designId);
+      if (design) {
+        setParams(design.params);
+      }
+    }
+  }, [searchParams, setParams]);
 
   if (!productSlug || !isProductSlug(productSlug)) {
     return (
@@ -59,8 +85,13 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-4">
-        <Link href="/" className="text-lg font-light tracking-wide text-stone-900">
-          CAMBIUM
+        <Link href="/" className="flex items-baseline gap-1">
+          <span className="text-lg font-light tracking-[0.15em] text-stone-900">
+            CAMBIUM
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
+            Design
+          </span>
         </Link>
         <div className="text-right">
           <div className="text-sm font-medium text-stone-900">{product.label}</div>

@@ -1,72 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
-import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES, getSpeciesForRegion, REGION_STORIES, SPECIES_STORIES, getCheapestLocalSpecies, getEffectiveWoodPrice, isValidZip, zipToRegion } from "@cambium/shared";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES, getSpeciesForRegion, REGION_STORIES, SPECIES_STORIES, getCheapestLocalSpecies, getEffectiveWoodPrice } from "@cambium/shared";
 import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
 import { useRegionStore } from "@/lib/region-store";
+import { ZipEntry } from "@/components/ZipEntry";
 
-// ─── ZIP Entry Component ────────────────────────────────────────
+// ─── First Visit Redirect ─────────────────────────────────────────
 
-function ZipEntry() {
-  const { zip, regionId, isDetected, setZip } = useRegionStore();
-  const [input, setInput] = useState(zip ?? "");
-  const region = REGIONS.find((r) => r.id === regionId);
+const VISITED_KEY = "cambium-visited";
 
-  const handleInput = useCallback(
-    (value: string) => {
-      const digits = value.replace(/\D/g, "").slice(0, 5);
-      setInput(digits);
-      if (digits.length === 5) {
-        setZip(digits);
-      }
-    },
-    [setZip]
-  );
+function useFirstVisitRedirect() {
+  const router = useRouter();
+  const [checked, setChecked] = useState(false);
 
-  if (isDetected && region) {
-    return (
-      <div className="flex items-center gap-3 rounded-2xl bg-white/80 px-5 py-3 shadow-sm backdrop-blur">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-          <span className="text-sm">🌲</span>
-        </div>
-        <div>
-          <div className="text-sm font-medium text-stone-900">
-            {region.name} Workshop
-          </div>
-          <div className="text-xs text-stone-500">
-            {region.city}, {region.state} &middot; ZIP {zip}
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setInput("");
-            useRegionStore.getState().setRegion("minneapolis");
-            useRegionStore.setState({ zip: null, isDetected: false });
-          }}
-          className="ml-auto text-xs text-stone-400 hover:text-stone-600"
-        >
-          Change
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const visited = localStorage.getItem(VISITED_KEY);
+    if (!visited) {
+      localStorage.setItem(VISITED_KEY, "true");
+      router.replace("/our-story");
+    } else {
+      setChecked(true);
+    }
+  }, [router]);
 
-  return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/80 px-5 py-3 shadow-sm backdrop-blur">
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder="Enter your ZIP code"
-        value={input}
-        onChange={(e) => handleInput(e.target.value)}
-        className="w-32 bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
-      />
-      <span className="text-xs text-stone-400">
-        Find your local workshop
-      </span>
-    </div>
-  );
+  return checked;
 }
 
 // ─── Region Story Component ─────────────────────────────────────
@@ -170,10 +130,20 @@ function useRegionalStartingPrice(regionId: string) {
 export default function Home() {
   const { regionId, isDetected, hydrate } = useRegionStore();
   const prices = useRegionalStartingPrice(regionId);
+  const ready = useFirstVisitRedirect();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Don't render until we've checked first-visit status
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-stone-50">
+        <div className="text-sm text-stone-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_rgba(244,240,235,0.95)_42%,_#e5ddd3_100%)]">
@@ -181,9 +151,6 @@ export default function Home() {
       <div className="px-6 pb-8 pt-12">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 max-w-2xl">
-            <p className="mb-4 text-xs uppercase tracking-[0.35em] text-stone-500">
-              Cambium
-            </p>
             <h1 className="mb-4 text-4xl font-light leading-tight tracking-tight text-stone-900 sm:text-5xl">
               Designed by you. Built near you.
             </h1>

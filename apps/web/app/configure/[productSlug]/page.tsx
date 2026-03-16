@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ConfigureClient from "./ConfigureClient";
 
 export function generateStaticParams() {
@@ -15,5 +16,9 @@ export default async function ConfigurePage({
   params: Promise<{ productSlug: string }>;
 }) {
   const { productSlug } = await params;
-  return <ConfigureClient productSlug={productSlug} />;
+  return (
+    <Suspense>
+      <ConfigureClient productSlug={productSlug} />
+    </Suspense>
+  );
 }

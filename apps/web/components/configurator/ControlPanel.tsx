@@ -1,6 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useConfiguratorStore } from "@/lib/configurator-store";
+import { useRegionStore } from "@/lib/region-store";
+import { useBenchStore } from "@/lib/bench-store";
+import { useSavedDesignsStore } from "@/lib/saved-designs-store";
 import {
   FINISHES,
   REGIONS,
@@ -8,6 +13,8 @@ import {
   WOOD_SPECIES,
   getSpeciesForRegion,
   getEffectiveWoodPrice,
+  getRegionDistance,
+  getClosestSourceRegion,
 } from "@cambium/shared";
 import type {
   AnyProductParams,
@@ -380,6 +387,38 @@ function ShelfDesign() {
   );
 }
 
+// ─── Static Region Display ──────────────────────────────────────
+
+function RegionDisplay() {
+  const regionId = useConfiguratorStore((s) => s.params.regionId);
+  const zip = useRegionStore((s) => s.zip);
+  const region = REGIONS.find((r) => r.id === regionId);
+
+  if (!region) return null;
+
+  return (
+    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-sm font-medium text-stone-900">
+            {region.name}
+          </div>
+          <div className="text-xs text-stone-500">
+            {region.city}, {region.state}
+            {zip && <span className="ml-1">· ZIP {zip}</span>}
+          </div>
+        </div>
+        <Link
+          href="/"
+          className="text-xs text-stone-400 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-600"
+        >
+          Change
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── Wood Species Selector ──────────────────────────────────────
 
 function WoodSpeciesSelector({
@@ -391,6 +430,7 @@ function WoodSpeciesSelector({
   selectedSpecies: string;
   onSelect: (speciesId: string) => void;
 }) {
+  const [pendingSpecies, setPendingSpecies] = useState<string | null>(null);
   const localSpecies = getSpeciesForRegion(regionId);
   const localIds = new Set(localSpecies.map((s) => s.id));
 
@@ -399,8 +439,73 @@ function WoodSpeciesSelector({
     (s) => !localIds.has(s.id)
   );
 
+  const handleCrossRegionClick = (speciesId: string) => {
+    if (selectedSpecies === speciesId) return; // already selected
+    setPendingSpecies(speciesId);
+  };
+
+  const confirmCrossRegion = () => {
+    if (pendingSpecies) {
+      onSelect(pendingSpecies);
+      setPendingSpecies(null);
+    }
+  };
+
+  const cancelCrossRegion = () => {
+    setPendingSpecies(null);
+  };
+
+  // Get info for the pending species (for the confirmation banner)
+  const pendingInfo = pendingSpecies
+    ? (() => {
+        const species = WOOD_SPECIES.find((s) => s.id === pendingSpecies);
+        if (!species) return null;
+        const sourceRegion = getClosestSourceRegion(
+          species.regions as unknown as readonly string[],
+          regionId
+        );
+        const sourceRegionData = REGIONS.find((r) => r.id === sourceRegion);
+        const pricing = getEffectiveWoodPrice(
+          species.id,
+          species.regions as unknown as readonly string[],
+          regionId
+        );
+        const distance = getRegionDistance(regionId, sourceRegion);
+        return { species, sourceRegionData, pricing, distance };
+      })()
+    : null;
+
   return (
     <div className="space-y-3">
+      {/* Confirmation banner for cross-region selection */}
+      {pendingInfo && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+          <div className="mb-2 text-xs font-medium text-red-800">
+            This wood ships from {pendingInfo.sourceRegionData?.name ?? "another region"}
+          </div>
+          <div className="mb-2 space-y-1 text-[11px] text-red-700">
+            <div>
+              +${pendingInfo.pricing.surcharge.toFixed(2)}/bf sustainability surcharge
+            </div>
+            <div>~{pendingInfo.distance} extra miles of transport</div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={confirmCrossRegion}
+              className="rounded-md bg-red-700 px-3 py-1 text-[11px] font-medium text-white transition-colors hover:bg-red-800"
+            >
+              Confirm Selection
+            </button>
+            <button
+              onClick={cancelCrossRegion}
+              className="rounded-md border border-red-200 px-3 py-1 text-[11px] text-red-700 transition-colors hover:bg-red-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Local species */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -419,7 +524,10 @@ function WoodSpeciesSelector({
             return (
               <button
                 key={species.id}
-                onClick={() => onSelect(species.id)}
+                onClick={() => {
+                  setPendingSpecies(null);
+                  onSelect(species.id);
+                }}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
                   selectedSpecies === species.id
                     ? "border-stone-900 bg-stone-900 text-white"
@@ -447,8 +555,8 @@ function WoodSpeciesSelector({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-stone-600">Other Regions</span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-              +Shipping
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+              +Surcharge
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -458,32 +566,220 @@ function WoodSpeciesSelector({
                 species.regions as unknown as readonly string[],
                 regionId
               );
+              const sourceRegion = getClosestSourceRegion(
+                species.regions as unknown as readonly string[],
+                regionId
+              );
+              const distance = getRegionDistance(regionId, sourceRegion);
+              const isSelected = selectedSpecies === species.id;
+              const isPending = pendingSpecies === species.id;
               return (
                 <button
                   key={species.id}
-                  onClick={() => onSelect(species.id)}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                    selectedSpecies === species.id
+                  onClick={() => handleCrossRegionClick(species.id)}
+                  className={`relative flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs transition-colors ${
+                    isSelected
                       ? "border-stone-900 bg-stone-900 text-white"
-                      : "border-stone-200 bg-white text-stone-700 hover:border-stone-400"
+                      : isPending
+                        ? "border-red-400 bg-red-50 text-red-900"
+                        : "border-stone-200 bg-white text-stone-700 hover:border-red-300"
                   }`}
                 >
-                  <span
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: species.color }}
-                  />
-                  <span className="truncate">{species.name}</span>
-                  <span className={`ml-auto text-[10px] ${
-                    selectedSpecies === species.id ? "text-white/60" : "text-amber-500"
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: species.color }}
+                    />
+                    <span className="truncate">{species.name}</span>
+                  </div>
+                  <div className={`flex items-center justify-between text-[10px] ${
+                    isSelected ? "text-white/60" : "text-red-500"
                   }`}>
-                    ${pricing.pricePerBf.toFixed(2)}/bf
-                  </span>
+                    <span>${pricing.pricePerBf.toFixed(2)}/bf</span>
+                    <span>~{distance}mi</span>
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Price Footer with Bench & Save ─────────────────────────────
+
+function PriceFooter({
+  product,
+  params,
+  cost,
+  resetParams,
+}: {
+  product: ProductDefinition;
+  params: AnyProductParams;
+  cost: { total: number; isLocalWood: boolean; crossRegionSurcharge: number };
+  resetParams: () => void;
+}) {
+  const addToBench = useBenchStore((s) => s.addItem);
+  const saveDesign = useSavedDesignsStore((s) => s.saveDesign);
+  const hydrateBench = useBenchStore((s) => s.hydrate);
+  const hydrateDesigns = useSavedDesignsStore((s) => s.hydrate);
+
+  const [benchAdded, setBenchAdded] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [designName, setDesignName] = useState("");
+
+  useEffect(() => {
+    hydrateBench();
+    hydrateDesigns();
+  }, [hydrateBench, hydrateDesigns]);
+
+  const species = WOOD_SPECIES.find((s) => s.id === params.woodSpecies);
+
+  const handleAddToBench = () => {
+    addToBench({
+      productSlug: params.productSlug,
+      params,
+      cost: cost.total,
+    });
+    setBenchAdded(true);
+    setTimeout(() => setBenchAdded(false), 2000);
+  };
+
+  const handleSave = () => {
+    const defaultName = `${product.label} - ${species?.name ?? params.woodSpecies} - ${new Date().toLocaleDateString()}`;
+    setDesignName(defaultName);
+    setShowSaveDialog(true);
+  };
+
+  const confirmSave = () => {
+    saveDesign({
+      name: designName || `${product.label} design`,
+      productSlug: params.productSlug,
+      params,
+      cost: cost.total,
+    });
+    setShowSaveDialog(false);
+    setDesignName("");
+  };
+
+  return (
+    <div className="border-t border-stone-200 bg-white p-6">
+      {/* Save dialog */}
+      {showSaveDialog && (
+        <div className="mb-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
+          <div className="mb-2 text-xs font-medium text-stone-600">
+            Name this design
+          </div>
+          <input
+            type="text"
+            value={designName}
+            onChange={(e) => setDesignName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && confirmSave()}
+            className="mb-2 w-full rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-900 outline-none focus:border-stone-400"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={confirmSave}
+              className="rounded-md bg-stone-900 px-3 py-1 text-xs text-white"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setShowSaveDialog(false)}
+              className="rounded-md border border-stone-200 px-3 py-1 text-xs text-stone-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Price */}
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-sm text-stone-500">Estimated Price</span>
+        <span className="text-3xl font-light text-stone-900">
+          ${cost.total}
+        </span>
+      </div>
+      {!cost.isLocalWood && cost.crossRegionSurcharge > 0 && (
+        <div className="mb-2 rounded-md bg-red-50 px-3 py-1.5 text-xs text-red-700">
+          Includes ${cost.crossRegionSurcharge.toFixed(2)} cross-region sustainability surcharge
+        </div>
+      )}
+      {cost.isLocalWood && (
+        <div className="mb-2 rounded-md bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
+          Using locally-sourced wood — best value
+        </div>
+      )}
+      <div className="mb-4 text-xs text-stone-500">
+        Target ${product.priceBand.min} – ${product.priceBand.max}
+      </div>
+
+      {/* Action buttons */}
+      <div className="space-y-2">
+        <button
+          onClick={handleAddToBench}
+          className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm transition-colors ${
+            benchAdded
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-stone-900 text-white hover:bg-stone-800"
+          }`}
+        >
+          {benchAdded ? (
+            "✓ Added to Bench!"
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              Add to Bench
+            </>
+          )}
+        </button>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-stone-400"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+            </svg>
+            Save Design
+          </button>
+          <button
+            onClick={resetParams}
+            className="flex-1 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-stone-400"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -542,32 +838,9 @@ export function ControlPanel() {
           </Section>
         )}
 
-        {/* Region */}
-        <Section title="Region">
-          <div className="space-y-2">
-            <span className="text-sm text-stone-600">Your Region</span>
-            <select
-              value={params.regionId}
-              onChange={(e) => {
-                const newRegion = e.target.value;
-                setParam("regionId", newRegion);
-                const species = getSpeciesForRegion(newRegion);
-                if (
-                  species.length > 0 &&
-                  !species.find((s) => s.id === params.woodSpecies)
-                ) {
-                  setParam("woodSpecies", species[0].id);
-                }
-              }}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm"
-            >
-              {REGIONS.map((region) => (
-                <option key={region.id} value={region.id}>
-                  {region.name} ({region.city}, {region.state})
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Region (locked — set on landing page via ZIP) */}
+        <Section title="Your Workshop">
+          <RegionDisplay />
         </Section>
 
         {/* Dimensions - constraint-driven */}
@@ -631,34 +904,13 @@ export function ControlPanel() {
         )}
       </div>
 
-      {/* Price footer */}
-      <div className="border-t border-stone-200 bg-white p-6">
-        <div className="mb-1 flex items-baseline justify-between">
-          <span className="text-sm text-stone-500">Estimated Price</span>
-          <span className="text-3xl font-light text-stone-900">
-            ${cost.total}
-          </span>
-        </div>
-        {!cost.isLocalWood && cost.crossRegionSurcharge > 0 && (
-          <div className="mb-2 rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
-            Includes ${cost.crossRegionSurcharge.toFixed(2)} cross-region wood surcharge
-          </div>
-        )}
-        {cost.isLocalWood && (
-          <div className="mb-2 rounded-md bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
-            Using locally-sourced wood — best value
-          </div>
-        )}
-        <div className="mb-4 text-xs text-stone-500">
-          Target ${product.priceBand.min} – ${product.priceBand.max}
-        </div>
-        <button
-          onClick={resetParams}
-          className="w-full rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-stone-400"
-        >
-          Reset to defaults
-        </button>
-      </div>
+      {/* Price footer + actions */}
+      <PriceFooter
+        product={product}
+        params={params}
+        cost={cost}
+        resetParams={resetParams}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cambium - Custom Furniture, Locally Made",
+  title: "Cambium Design - Custom Furniture, Locally Made",
   description:
     "Design personalized furniture crafted from locally-sourced wood at microfactories near you.",
 };
