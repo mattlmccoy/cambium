@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -71,6 +71,8 @@ interface CambiumMapProps {
   userZip?: string;
   compact?: boolean;
   onFocusChange?: (regionId: string | null) => void;
+  /** Externally controlled focus — set to programmatically focus a hub */
+  focusRegionId?: string | null;
 }
 
 interface TooltipData {
@@ -81,7 +83,7 @@ interface TooltipData {
 
 // ─── Component ──────────────────────────────────────────────────
 
-export function CambiumMap({ userRegionId, compact = false, onFocusChange }: CambiumMapProps) {
+export function CambiumMap({ userRegionId, compact = false, onFocusChange, focusRegionId }: CambiumMapProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [focusRegion, _setFocusRegion] = useState<string | null>(null);
 
@@ -92,6 +94,14 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange }: Cam
       return next;
     });
   }, [onFocusChange]);
+
+  // Sync external focusRegionId prop to internal state
+  useEffect(() => {
+    if (focusRegionId !== undefined) {
+      _setFocusRegion(focusRegionId);
+      onFocusChange?.(focusRegionId);
+    }
+  }, [focusRegionId, onFocusChange]);
 
   const userCoords = useMemo(() => {
     if (!userRegionId) return null;
@@ -262,18 +272,18 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange }: Cam
               {isFocus && (
                 <circle
                   r={10}
-                  fill="#f59e0b"
+                  fill="#22c55e"
                   fillOpacity={0.15}
-                  stroke="#f59e0b"
+                  stroke="#22c55e"
                   strokeWidth={0.75}
                   strokeOpacity={0.3}
                 />
               )}
               <circle
                 r={isFocus ? 5.5 : isUser ? 5 : 3.5}
-                fill={isFocus || isUser ? "#f59e0b" : "#ffffff"}
+                fill={isFocus || isUser ? "#22c55e" : "#ffffff"}
                 fillOpacity={markerOpacity}
-                stroke={isFocus || isUser ? "#92400e" : "#57534e"}
+                stroke={isFocus || isUser ? "#15803d" : "#57534e"}
                 strokeWidth={isFocus ? 2 : isUser ? 1.75 : 1.25}
                 strokeOpacity={markerOpacity}
                 style={{ cursor: "pointer" }}
@@ -300,7 +310,7 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange }: Cam
         {/* User region glow (when not in focus mode) */}
         {userCoords && userRegionId && !focusRegion && (
           <Marker coordinates={userCoords}>
-            <circle r={8} fill="#f59e0b" fillOpacity={0.2} />
+            <circle r={8} fill="#22c55e" fillOpacity={0.2} />
           </Marker>
         )}
       </ComposableMap>

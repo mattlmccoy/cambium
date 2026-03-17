@@ -40,10 +40,19 @@ const stagger = {
 
 // ─── Network Section (with map) ──────────────────────────────────
 
-function NetworkSection() {
+function NetworkSection({
+  focusedHub,
+  setFocusedHub,
+  externalFocusId,
+  mapRef,
+}: {
+  focusedHub: string | null;
+  setFocusedHub: (id: string | null) => void;
+  externalFocusId: string | null;
+  mapRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const regionId = useRegionStore((s) => s.regionId);
   const isDetected = useRegionStore((s) => s.isDetected);
-  const [focusedHub, setFocusedHub] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Auto-scroll to focused card on mobile / when off-screen
@@ -80,10 +89,11 @@ function NetworkSection() {
             Click a workshop to see its pricing tiers. Hover to view local wood species.
           </motion.p>
 
-          <motion.div variants={fadeIn}>
+          <motion.div variants={fadeIn} ref={mapRef}>
             <CambiumMap
               userRegionId={isDetected ? regionId : undefined}
               onFocusChange={setFocusedHub}
+              focusRegionId={externalFocusId}
             />
           </motion.div>
 
@@ -166,6 +176,9 @@ const REGION_COLORS_MAP: Record<string, string> = {
 export default function OurStoryPage() {
   const hydrate = useRegionStore((s) => s.hydrate);
   const router = useRouter();
+  const [focusedHub, setFocusedHub] = useState<string | null>(null);
+  const [externalFocusId, setExternalFocusId] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -463,7 +476,12 @@ export default function OurStoryPage() {
       </section>
 
       {/* ─── Section 7: Our Network (Interactive Map) ──────── */}
-      <NetworkSection />
+      <NetworkSection
+        focusedHub={focusedHub}
+        setFocusedHub={setFocusedHub}
+        externalFocusId={externalFocusId}
+        mapRef={mapRef}
+      />
 
       {/* ─── Section 8: CTA ────────────────────────────────── */}
       <section className="px-6 py-24">
@@ -484,12 +502,17 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="mb-8 text-lg text-stone-600"
             >
-              Enter your ZIP to find your local workshop, then jump into the 3D configurator.
+              Enter your ZIP to find your local workshop and see it highlighted on the map above.
             </motion.p>
             <motion.div variants={fadeUp} className="flex justify-center">
               <ZipEntry
-                onDetected={() => {
-                  router.push("/");
+                onDetected={(detectedRegionId) => {
+                  setExternalFocusId(detectedRegionId);
+                  setFocusedHub(detectedRegionId);
+                  // Scroll to map section
+                  setTimeout(() => {
+                    mapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 100);
                 }}
               />
             </motion.div>
@@ -498,7 +521,7 @@ export default function OurStoryPage() {
                 href="/"
                 className="text-sm text-stone-400 underline decoration-stone-300 underline-offset-4 hover:text-stone-600"
               >
-                or browse the collection without a ZIP
+                or browse the collection →
               </Link>
             </motion.div>
           </motion.div>
