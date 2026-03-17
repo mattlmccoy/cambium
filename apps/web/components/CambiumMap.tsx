@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -85,23 +85,25 @@ interface TooltipData {
 
 export function CambiumMap({ userRegionId, compact = false, onFocusChange, focusRegionId }: CambiumMapProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const [focusRegion, _setFocusRegion] = useState<string | null>(null);
+  const [focusRegion, setFocusRegion] = useState<string | null>(null);
+  const onFocusChangeRef = useRef(onFocusChange);
+  useEffect(() => { onFocusChangeRef.current = onFocusChange; });
+  const prevFocusRef = useRef(focusRegion);
 
-  const setFocusRegion = useCallback((updater: string | null | ((prev: string | null) => string | null)) => {
-    _setFocusRegion((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      onFocusChange?.(next);
-      return next;
-    });
-  }, [onFocusChange]);
+  // Notify parent when focus changes (only on actual changes)
+  useEffect(() => {
+    if (prevFocusRef.current !== focusRegion) {
+      prevFocusRef.current = focusRegion;
+      onFocusChangeRef.current?.(focusRegion);
+    }
+  }, [focusRegion]);
 
   // Sync external focusRegionId prop to internal state
   useEffect(() => {
     if (focusRegionId !== undefined) {
-      _setFocusRegion(focusRegionId);
-      onFocusChange?.(focusRegionId);
+      setFocusRegion(focusRegionId);
     }
-  }, [focusRegionId, onFocusChange]);
+  }, [focusRegionId]);
 
   const userCoords = useMemo(() => {
     if (!userRegionId) return null;
@@ -161,7 +163,7 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange, focus
 
               return (
                 <Geography
-                  key={geo.rpiKey}
+                  key={geo.rsmKey}
                   geography={geo}
                   fill={isUserRegion ? "#374151" : dimmed ? "#e2ddd6" : fillColor}
                   stroke="#ffffff"
