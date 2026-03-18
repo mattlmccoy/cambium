@@ -1,5 +1,10 @@
-import type { BOMItem, GeometryPart, ShapeDescriptor, Vec3 } from "@cambium/shared";
+import type { BOMItem, GeometryLayer, GeometryPart, ShapeDescriptor, Vec3 } from "@cambium/shared";
 import { mmToBoardFeet } from "../shared-cost";
+
+/** Infer the layer from the material if not explicitly provided */
+function inferLayer(material: GeometryPart["material"]): GeometryLayer {
+  return material === "wood" ? "shell" : "core";
+}
 
 export function boxPart(
   id: string,
@@ -9,7 +14,8 @@ export function boxPart(
   position: Vec3,
   dimensions: Vec3,
   rotation: Vec3 = { x: 0, y: 0, z: 0 },
-  radius = 0
+  radius = 0,
+  layer?: GeometryLayer
 ): GeometryPart {
   const shape: ShapeDescriptor =
     radius > 0
@@ -27,7 +33,7 @@ export function boxPart(
           depth: dimensions.z,
         };
 
-  return { id, name, type, material, position, rotation, dimensions, shape };
+  return { id, name, type, material, layer: layer ?? inferLayer(material), position, rotation, dimensions, shape };
 }
 
 export function cylinderPart(
@@ -38,13 +44,15 @@ export function cylinderPart(
   position: Vec3,
   height: number,
   radius: number,
-  rotation: Vec3 = { x: 0, y: 0, z: 0 }
+  rotation: Vec3 = { x: 0, y: 0, z: 0 },
+  layer?: GeometryLayer
 ): GeometryPart {
   return {
     id,
     name,
     type,
     material,
+    layer: layer ?? inferLayer(material),
     position,
     rotation,
     dimensions: { x: radius * 2, y: height, z: radius * 2 },

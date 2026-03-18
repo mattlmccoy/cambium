@@ -147,6 +147,10 @@ export interface ProductDefinition<TParams extends AnyProductParams = AnyProduct
   modes?: { id: string; label: string }[];
   defaultModeLabel?: string;
   priceBand: PriceBand;
+  /** When true, dimension sliders and structural options (leg count, mount type) are hidden.
+   *  Users can only choose cosmetic options (wood, finish, edge profile, wrap style).
+   *  The config engine enforces default values for all locked fields. */
+  dimensionsLocked: boolean;
   defaults: TParams;
   constraints: ProductConstraints;
   core: CoreSpec;
@@ -172,11 +176,16 @@ export type GeometryPartType =
 
 export type GeometryMaterial = "wood" | "metal" | "plastic";
 
+/** Whether a geometry part belongs to the steel Core or the wood Shell layer */
+export type GeometryLayer = "core" | "shell";
+
 export interface GeometryPart {
   id: string;
   name: string;
   type: GeometryPartType;
   material: GeometryMaterial;
+  /** Core = steel subframe (loaded from GLB or procedural), Shell = wood panels (always procedural) */
+  layer: GeometryLayer;
   position: Vec3;
   rotation: Vec3;
   dimensions: Vec3;

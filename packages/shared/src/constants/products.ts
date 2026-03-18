@@ -119,6 +119,7 @@ export const PRODUCT_CATALOG: Record<
     category: "accent",
     description: "Compact accent table with a fold-flat Core and CNC-cut wood wraps.",
     priceBand: { min: 99, max: 249 },
+    dimensionsLocked: true,
     defaults: SIDE_TABLE_DEFAULTS,
     constraints: SIDE_TABLE_CONSTRAINTS,
     core: {
@@ -155,6 +156,7 @@ export const PRODUCT_CATALOG: Record<
     ],
     defaultModeLabel: "Dining",
     priceBand: { min: 249, max: 899 },
+    dimensionsLocked: true,
     defaults: TABLE_DEFAULTS,
     constraints: {
       length: TABLE_CONSTRAINTS.length,
@@ -191,6 +193,7 @@ export const PRODUCT_CATALOG: Record<
     category: "seating",
     description: "Core-led seating frame with cosmetic wood seat, back, and leg wraps.",
     priceBand: { min: 149, max: 349 },
+    dimensionsLocked: true,
     defaults: CHAIR_DEFAULTS,
     constraints: CHAIR_CONSTRAINTS,
     core: {
@@ -227,6 +230,7 @@ export const PRODUCT_CATALOG: Record<
     ],
     defaultModeLabel: "Free-Standing",
     priceBand: { min: 79, max: 499 },
+    dimensionsLocked: true,
     defaults: SHELF_DEFAULTS,
     constraints: SHELF_CONSTRAINTS,
     core: {

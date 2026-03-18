@@ -4,6 +4,7 @@ export * from "./regional-pricing";
 export * from "./zip-regions";
 export * from "./stories";
 export * from "./carbon";
+export * from "./core-registry";
 
 // ─── Side Table Parameter Constraints ────────────────────────────
 

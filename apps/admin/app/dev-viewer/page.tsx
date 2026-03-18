@@ -14,6 +14,8 @@ import * as THREE from "three";
 
 // ─── Types ──────────────────────────────────────────────────────
 
+type ProductSlug = "side-table" | "table" | "chair" | "shelf";
+
 interface ModelStats {
   meshCount: number;
   vertexCount: number;
@@ -47,6 +49,40 @@ type PipelineStatus =
   | { stage: "done"; result: ConversionResult }
   | { stage: "error"; message: string };
 
+interface OrientationPreset {
+  label: string;
+  rotation: [number, number, number];
+}
+
+interface CoreModelMeta {
+  productSlug: ProductSlug;
+  approvedAt: string;
+  orientationEuler: [number, number, number];
+  boundingBox: { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } };
+  fixedDimensions: { width: number; height: number; depth: number };
+  originalFilename: string;
+  optimizedSizeBytes: number;
+  version: number;
+}
+
+// ─── Constants ──────────────────────────────────────────────────
+
+const ORIENTATION_PRESETS: OrientationPreset[] = [
+  { label: "Default (Y up)", rotation: [0, 0, 0] },
+  { label: "+X down", rotation: [0, 0, Math.PI / 2] },
+  { label: "\u2212X down", rotation: [0, 0, -Math.PI / 2] },
+  { label: "+Z down", rotation: [Math.PI / 2, 0, 0] },
+  { label: "\u2212Z down", rotation: [-Math.PI / 2, 0, 0] },
+  { label: "Flipped (Y down)", rotation: [Math.PI, 0, 0] },
+];
+
+const PRODUCT_OPTIONS: { slug: ProductSlug; label: string }[] = [
+  { slug: "side-table", label: "Side Table" },
+  { slug: "table", label: "Table" },
+  { slug: "chair", label: "Chair" },
+  { slug: "shelf", label: "Shelf" },
+];
+
 // ─── In-Browser glTF → GLB Conversion ──────────────────────────
 
 async function convertGltfToGlb(
@@ -67,7 +103,6 @@ async function convertGltfToGlb(
     const buffer = await primaryFile.arrayBuffer();
     const document = await io.readBinary(new Uint8Array(buffer) as unknown as Uint8Array);
 
-    // Optimize
     await document.transform(dedup(), weld(), quantize());
 
     const optimizedBinary = await io.writeBinary(document);
@@ -84,7 +119,6 @@ async function convertGltfToGlb(
   }
 
   // For glTF: build a virtual filesystem from all dropped files
-  // so external .bin and texture references resolve correctly
   const fileMap: Record<string, Uint8Array> = {};
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
@@ -92,12 +126,9 @@ async function convertGltfToGlb(
     fileMap[f.name] = new Uint8Array(buffer);
   }
 
-  // Read the primary glTF JSON
   const gltfJson = JSON.parse(new TextDecoder().decode(fileMap[primaryFile.name]));
 
-  // Resolve buffer URIs to actual data
   const resolveURI = (uri: string): Uint8Array => {
-    // Data URIs are handled by gltf-transform internally
     if (uri.startsWith("data:")) {
       const base64 = uri.split(",")[1];
       const binary = atob(base64);
@@ -105,7 +136,6 @@ async function convertGltfToGlb(
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       return bytes;
     }
-    // Try to find in dropped files
     const decoded = decodeURIComponent(uri);
     const name = decoded.split("/").pop() ?? decoded;
     if (fileMap[name]) return fileMap[name];
@@ -113,10 +143,8 @@ async function convertGltfToGlb(
     throw new Error(`Referenced file not found: ${uri}. Make sure to drop all related files together.`);
   };
 
-  // Build the JSON document for WebIO
   const resources: Record<string, Uint8Array> = {};
 
-  // Resolve buffers
   if (gltfJson.buffers) {
     for (const buffer of gltfJson.buffers) {
       if (buffer.uri && !buffer.uri.startsWith("data:")) {
@@ -125,7 +153,6 @@ async function convertGltfToGlb(
     }
   }
 
-  // Resolve images
   if (gltfJson.images) {
     for (const image of gltfJson.images) {
       if (image.uri && !image.uri.startsWith("data:")) {
@@ -136,10 +163,8 @@ async function convertGltfToGlb(
 
   const document = await io.readJSON({ json: gltfJson, resources: resources as Record<string, Uint8Array<ArrayBuffer>> });
 
-  // Optimize
   await document.transform(dedup(), weld(), quantize());
 
-  // Write as GLB
   const glbBinary = await io.writeBinary(document);
   const blob = new Blob([glbBinary], { type: "model/gltf-binary" });
   const url = URL.createObjectURL(blob);
@@ -159,11 +184,13 @@ function ModelScene({
   url,
   materialOverrides,
   showAxes,
+  orientation,
   onStats,
 }: {
   url: string;
   materialOverrides: MaterialOverrides;
   showAxes: boolean;
+  orientation: [number, number, number];
   onStats: (stats: ModelStats) => void;
 }) {
   const { scene } = useGLTF(url);
@@ -240,7 +267,10 @@ function ModelScene({
 
   return (
     <group scale={scale}>
-      <primitive object={clonedScene.clone} />
+      {/* Orientation wrapper — rotates model to chosen "floor" */}
+      <group rotation={orientation}>
+        <primitive object={clonedScene.clone} />
+      </group>
       {showAxes && <axesHelper args={[500]} />}
     </group>
   );
@@ -304,11 +334,13 @@ export default function DevViewerPage() {
     roughness: 0.35,
     wireframe: false,
   });
+  const [orientation, setOrientation] = useState<[number, number, number]>([0, 0, 0]);
+  const [approveSlug, setApproveSlug] = useState<ProductSlug>("side-table");
+  const [approveVersion, setApproveVersion] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = useCallback(
     async (files: FileList) => {
-      // Find the primary .gltf or .glb file
       const primary = Array.from(files).find(
         (f) => f.name.endsWith(".gltf") || f.name.endsWith(".glb")
       );
@@ -317,23 +349,20 @@ export default function DevViewerPage() {
         return;
       }
 
-      // Clean up previous
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       if (pipeline.stage === "done") URL.revokeObjectURL(pipeline.result.glbUrl);
 
       try {
         setPipeline({ stage: "reading" });
-
-        // Small delay to show the reading state
         await new Promise((r) => setTimeout(r, 50));
         setPipeline({ stage: "optimizing" });
 
         const result = await convertGltfToGlb(files, primary);
 
         setPipeline({ stage: "done", result });
-
-        // Use the optimized GLB for preview
         setPreviewUrl(result.glbUrl);
+        // Reset orientation for new model
+        setOrientation([0, 0, 0]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error during conversion";
         setPipeline({ stage: "error", message: msg });
@@ -368,6 +397,7 @@ export default function DevViewerPage() {
     setPreviewUrl(null);
     setPipeline({ stage: "idle" });
     setStats(null);
+    setOrientation([0, 0, 0]);
   }, [previewUrl, pipeline]);
 
   const handleDownload = useCallback(() => {
@@ -378,12 +408,67 @@ export default function DevViewerPage() {
     a.click();
   }, [pipeline]);
 
+  const handleApprove = useCallback(() => {
+    if (pipeline.stage !== "done" || !stats) return;
+
+    const box = stats.boundingBox;
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const meta: CoreModelMeta = {
+      productSlug: approveSlug,
+      approvedAt: new Date().toISOString(),
+      orientationEuler: orientation,
+      boundingBox: {
+        min: { x: box.min.x, y: box.min.y, z: box.min.z },
+        max: { x: box.max.x, y: box.max.y, z: box.max.z },
+      },
+      fixedDimensions: {
+        width: Math.round(size.x * 10) / 10,
+        height: Math.round(size.y * 10) / 10,
+        depth: Math.round(size.z * 10) / 10,
+      },
+      originalFilename: pipeline.result.filename,
+      optimizedSizeBytes: pipeline.result.optimizedSize,
+      version: approveVersion,
+    };
+
+    const glbFilename = `${approveSlug}-core.glb`;
+    const metaFilename = `${approveSlug}-core.meta.json`;
+
+    // Download GLB
+    const glbLink = document.createElement("a");
+    glbLink.href = pipeline.result.glbUrl;
+    glbLink.download = glbFilename;
+    glbLink.click();
+
+    // Download meta.json
+    setTimeout(() => {
+      const metaBlob = new Blob([JSON.stringify(meta, null, 2)], { type: "application/json" });
+      const metaUrl = URL.createObjectURL(metaBlob);
+      const metaLink = document.createElement("a");
+      metaLink.href = metaUrl;
+      metaLink.download = metaFilename;
+      metaLink.click();
+      URL.revokeObjectURL(metaUrl);
+    }, 200);
+  }, [pipeline, stats, approveSlug, approveVersion, orientation]);
+
   const handleStats = useCallback((newStats: ModelStats) => {
     setStats((prev) => ({
       ...newStats,
       fileSize: pipeline.stage === "done" ? pipeline.result.optimizedSize : prev?.fileSize ?? 0,
     }));
   }, [pipeline]);
+
+  // Orientation helpers
+  const rotateAxis = useCallback((axis: 0 | 1 | 2, degrees: number) => {
+    setOrientation((prev) => {
+      const next: [number, number, number] = [...prev];
+      next[axis] += (degrees * Math.PI) / 180;
+      return next;
+    });
+  }, []);
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return "\u2014";
@@ -395,7 +480,7 @@ export default function DevViewerPage() {
   const formatDim = (box: THREE.Box3) => {
     const size = new THREE.Vector3();
     box.getSize(size);
-    return `${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)}`;
+    return `${size.x.toFixed(1)} \u00d7 ${size.y.toFixed(1)} \u00d7 ${size.z.toFixed(1)}`;
   };
 
   const compressionRatio =
@@ -412,6 +497,7 @@ export default function DevViewerPage() {
   };
 
   const isProcessing = pipeline.stage === "reading" || pipeline.stage === "optimizing" || pipeline.stage === "writing";
+  const hasModel = !!previewUrl;
 
   return (
     <div className="h-full flex flex-col">
@@ -471,20 +557,8 @@ export default function DevViewerPage() {
         >
           {isProcessing && (
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           )}
           {pipeline.stage === "reading" && "Reading glTF file..."}
@@ -536,9 +610,7 @@ export default function DevViewerPage() {
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-50/80">
               <div className="text-center">
                 <div className="text-4xl mb-2">📥</div>
-                <div className="text-sm font-medium text-blue-600">
-                  Drop glTF / GLB files
-                </div>
+                <div className="text-sm font-medium text-blue-600">Drop glTF / GLB files</div>
                 <div className="text-xs text-blue-500 mt-1">
                   Include .bin and texture files if separate
                 </div>
@@ -561,6 +633,7 @@ export default function DevViewerPage() {
                   url={previewUrl}
                   materialOverrides={materialOverrides}
                   showAxes={showAxes}
+                  orientation={orientation}
                   onStats={handleStats}
                 />
               ) : (
@@ -595,14 +668,7 @@ export default function DevViewerPage() {
               />
             )}
 
-            <ContactShadows
-              position={[0, -0.01, 0]}
-              opacity={0.4}
-              scale={5}
-              blur={2}
-              far={2}
-            />
-
+            <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={5} blur={2} far={2} />
             <OrbitControls enablePan minDistance={0.3} maxDistance={10} />
           </Canvas>
 
@@ -615,7 +681,113 @@ export default function DevViewerPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-72 border-l border-zinc-200 overflow-y-auto bg-white">
+        <div className="w-80 border-l border-zinc-200 overflow-y-auto bg-white">
+          {/* Approve Core */}
+          {hasModel && pipeline.stage === "done" && (
+            <div className="p-4 border-b border-zinc-200 bg-blue-50">
+              <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">
+                Approve Core
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-zinc-600 mb-1 block">Product</label>
+                  <select
+                    value={approveSlug}
+                    onChange={(e) => setApproveSlug(e.target.value as ProductSlug)}
+                    className="w-full text-sm border border-zinc-300 rounded-lg px-3 py-1.5 bg-white"
+                  >
+                    {PRODUCT_OPTIONS.map((p) => (
+                      <option key={p.slug} value={p.slug}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-600 mb-1 block">Version</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={approveVersion}
+                    onChange={(e) => setApproveVersion(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full text-sm border border-zinc-300 rounded-lg px-3 py-1.5 bg-white"
+                  />
+                </div>
+                <button
+                  onClick={handleApprove}
+                  className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-500 transition-colors"
+                >
+                  Approve &amp; Download Bundle
+                </button>
+                <p className="text-[11px] text-zinc-500">
+                  Downloads <code className="bg-zinc-100 px-1 rounded">{approveSlug}-core.glb</code> +{" "}
+                  <code className="bg-zinc-100 px-1 rounded">{approveSlug}-core.meta.json</code> with the
+                  current orientation baked in.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Orientation */}
+          {hasModel && (
+            <div className="p-4 border-b border-zinc-200">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+                Orientation
+              </h3>
+              <div className="space-y-3">
+                {/* Presets */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ORIENTATION_PRESETS.map((preset) => {
+                    const isActive =
+                      orientation[0] === preset.rotation[0] &&
+                      orientation[1] === preset.rotation[1] &&
+                      orientation[2] === preset.rotation[2];
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => setOrientation(preset.rotation)}
+                        className={`px-2 py-1.5 rounded text-xs transition-colors ${
+                          isActive
+                            ? "bg-zinc-900 text-white"
+                            : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Fine-tune rotation */}
+                <div className="pt-2 border-t border-zinc-100">
+                  <span className="text-xs text-zinc-400 block mb-2">Fine-tune (90° steps)</span>
+                  <div className="space-y-1.5">
+                    {(["X", "Y", "Z"] as const).map((axis, idx) => (
+                      <div key={axis} className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-zinc-500 w-4">{axis}</span>
+                        <button
+                          onClick={() => rotateAxis(idx as 0 | 1 | 2, -90)}
+                          className="flex-1 px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded text-xs text-zinc-600 transition-colors"
+                        >
+                          −90°
+                        </button>
+                        <button
+                          onClick={() => rotateAxis(idx as 0 | 1 | 2, 90)}
+                          className="flex-1 px-2 py-1 bg-zinc-100 hover:bg-zinc-200 rounded text-xs text-zinc-600 transition-colors"
+                        >
+                          +90°
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[10px] text-zinc-400 font-mono">
+                    [{orientation.map((r) => `${((r * 180) / Math.PI).toFixed(0)}°`).join(", ")}]
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="p-4 border-b border-zinc-200">
             <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
@@ -830,11 +1002,11 @@ export default function DevViewerPage() {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-zinc-400 font-mono">2.</span>
-                  <span>Drop file(s) here</span>
+                  <span>Drop file(s) here — auto-optimizes to GLB</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-zinc-400 font-mono">3.</span>
-                  <span>Auto-optimizes: dedup, weld, quantize</span>
+                  <span>Orient model so it sits on the ground</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-zinc-400 font-mono">4.</span>
@@ -842,16 +1014,16 @@ export default function DevViewerPage() {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-zinc-400 font-mono">5.</span>
-                  <span>Download optimized GLB for configurator</span>
+                  <span>Approve — downloads GLB + meta.json</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-zinc-400 font-mono">6.</span>
+                  <span>Place in <code className="bg-zinc-100 px-1 rounded">apps/web/public/models/cores/</code></span>
                 </div>
               </div>
               <div className="mt-3 pt-3 border-t border-zinc-100">
                 <p className="text-zinc-400">
-                  Target: &lt;500KB per Core model.
-                  Downloaded GLBs go in{" "}
-                  <code className="bg-zinc-100 px-1 py-0.5 rounded text-[10px]">
-                    apps/web/public/models/cores/
-                  </code>
+                  Target: &lt;500KB per Core model. One Core per product (4 total).
                 </p>
               </div>
             </div>
