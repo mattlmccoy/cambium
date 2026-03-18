@@ -11,19 +11,26 @@
   },
   "dependencies": {
     "@cambium/config-engine": "workspace:*",
-    "@cambium/shared": "workspace:*",
     "@cambium/db": "workspace:*",
+    "@cambium/shared": "workspace:*",
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/extensions": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.511.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "three": "^0.172.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.172.0",
     "postcss": "^8.5.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0"

@@ -7,6 +7,7 @@ import {
   Geography,
   Marker,
 } from "react-simple-maps";
+import { geoAlbersUsa } from "d3-geo";
 import { REGIONS, REGION_COORDINATES, getSpeciesForRegion, getRegionDistance, REGION_TIERS, getRegionTier } from "@cambium/shared";
 
 // ─── FIPS code to state abbreviation ────────────────────────────
@@ -136,7 +137,41 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange, focus
   const scale = compact ? 800 : 1000;
   const mapWidth = compact ? 600 : 800;
   const mapHeight = compact ? 400 : 500;
-  const milesToSvg = mapWidth / 2800;
+
+  // Create a matching d3 projection to compute accurate tier ring radii.
+  // The naive `miles * (mapWidth / 2800)` doesn't account for AlbersUSA
+  // projection distortion, causing circles to be ~13% oversized.
+  const projection = useMemo(
+    () => geoAlbersUsa().scale(scale).translate([mapWidth / 2, mapHeight / 2]),
+    [scale, mapWidth, mapHeight],
+  );
+
+  /** Convert miles to projected SVG radius at a specific hub location. */
+  const milesToProjectedRadius = useCallback(
+    (hubLat: number, hubLng: number, miles: number): number => {
+      const center = projection([hubLng, hubLat]);
+      if (!center) return 0;
+
+      // Compute offsets in 4 cardinal directions and average for accuracy
+      const milesPerDegLng = 69.172 * Math.cos((hubLat * Math.PI) / 180);
+      const milesPerDegLat = 69.0;
+      const eastPt = projection([hubLng + miles / milesPerDegLng, hubLat]);
+      const northPt = projection([hubLng, hubLat + miles / milesPerDegLat]);
+
+      const radii: number[] = [];
+      if (eastPt) {
+        radii.push(Math.sqrt((eastPt[0] - center[0]) ** 2 + (eastPt[1] - center[1]) ** 2));
+      }
+      if (northPt) {
+        radii.push(Math.sqrt((northPt[0] - center[0]) ** 2 + (northPt[1] - center[1]) ** 2));
+      }
+
+      return radii.length > 0
+        ? radii.reduce((a, b) => a + b, 0) / radii.length
+        : miles * 0.25; // fallback
+    },
+    [projection],
+  );
 
   return (
     <div className={`relative ${compact ? "" : "mx-auto max-w-4xl"}`}>
@@ -189,7 +224,7 @@ export function CambiumMap({ userRegionId, compact = false, onFocusChange, focus
           return (
             <Marker coordinates={[focusCoords.lng, focusCoords.lat]}>
               {tierRings.map((tier) => {
-                const radius = tier.maxDistance * milesToSvg;
+                const radius = milesToProjectedRadius(focusCoords.lat, focusCoords.lng, tier.maxDistance);
                 const colors = TIER_RING_COLORS[tier.tier];
                 if (!colors) return null;
                 return (

@@ -76,13 +76,22 @@ export function generateShelfBOM(params: ShelfParams): BOMResult {
     panelItem("shelves", "Shelf Panel", params.woodSpecies, params.shelfCount, params.shelfWidth, params.shelfDepth, params.shelfThickness),
     panelItem("shelf-edges", "Shelf Edge Strip", params.woodSpecies, params.shelfCount, params.shelfWidth, 24, 8),
   ];
+  let totalRodMm = 0;
   if (params.mountType === "free-standing") {
-    items.push(lineItem("shelf-core", "Shelf Frame Rods", "core", "powder-coated steel", params.unitHeight > 1500 ? 7 : 6, 7));
+    const sideRodMm = params.unitHeight * 2;
+    const topBarMm = params.shelfWidth - 44;
+    const stabilizerMm = params.unitHeight > 1500 ? params.unitHeight - 80 : 0;
+    totalRodMm = sideRodMm + topBarMm + stabilizerMm;
+
+    items.push(lineItem("shelf-core", "Shelf Frame Rods", "core", "powder-coated steel", params.unitHeight > 1500 ? 7 : 6));
     if (params.backPanel) {
       items.push(panelItem("back-panel", "Back Panel", params.woodSpecies, 1, params.shelfWidth - 80, params.unitHeight - 120, 10));
     }
   } else {
-    items.push(lineItem("wall-brackets", "Wall Brackets", "core", "powder-coated steel", params.shelfCount * 2, 4));
+    const bracketMm = (params.shelfDepth - 24) * params.shelfCount * 2;
+    totalRodMm = bracketMm;
+
+    items.push(lineItem("wall-brackets", "Wall Brackets", "core", "powder-coated steel", params.shelfCount * 2));
     items.push(lineItem("wall-anchors", "Wall Anchor Kit", "hardware", "steel", params.shelfCount * 4, 0.25));
   }
   items.push(
@@ -92,5 +101,6 @@ export function generateShelfBOM(params: ShelfParams): BOMResult {
   return {
     items,
     totalBoardFeet: items.reduce((sum, item) => sum + (item.boardFeet ?? 0), 0),
+    totalRodMm,
   };
 }

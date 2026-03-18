@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useConfiguratorStore } from "@/lib/configurator-store";
 import { getSpeciesById } from "@cambium/shared";
 import { CoreMesh } from "./shared/CoreMesh";
+import { CoreModelMesh } from "./shared/CoreModelMesh";
 import { PartMesh } from "./shared/PartMesh";
 
 /**
@@ -35,13 +36,21 @@ export function GeometryModel() {
   return (
     <group scale={scale}>
       <group position={[0, offsetY, 0]}>
-        {geometry.parts.map((part) =>
-          part.material === "wood" ? (
-            <PartMesh key={part.id} part={part} color={woodColor} />
-          ) : (
-            <CoreMesh key={part.id} part={part} />
-          )
-        )}
+        {geometry.parts.map((part) => {
+          // Wood panels are always procedural
+          if (part.material === "wood") {
+            return <PartMesh key={part.id} part={part} color={woodColor} />;
+          }
+          // Core parts: use GLB model if shape is "model", otherwise procedural
+          if (part.shape.kind === "model") {
+            return (
+              <Suspense key={part.id} fallback={<CoreMesh part={part} />}>
+                <CoreModelMesh part={part} />
+              </Suspense>
+            );
+          }
+          return <CoreMesh key={part.id} part={part} />;
+        })}
       </group>
     </group>
   );

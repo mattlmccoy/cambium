@@ -93,8 +93,14 @@ export function generateTableBOM(params: TableParams): BOMResult {
   if (params.apronVisibility === "visible") {
     items.push(panelItem("apron-covers", "Apron Cover", params.woodSpecies, 2, params.length - 110, 36, 10));
   }
+  const legHeight = params.height - params.topThickness;
+  const legRodMm = legHeight * 4;
+  const apronRodMm = 2 * (params.length - 110) + 2 * (params.width - 110);
+  const braceRodMm = params.length > 1200 ? params.width - 120 : 0;
+  const totalRodMm = legRodMm + apronRodMm + braceRodMm;
+
   items.push(
-    lineItem("table-core-rods", "Steel Rod Set", "core", "powder-coated steel", params.length > 1200 ? 9 : 8, 9),
+    lineItem("table-core-rods", "Steel Rod Set", "core", "powder-coated steel", params.length > 1200 ? 9 : 8),
     lineItem("table-core-joints", "Joint Set", "core", "injection-molded nylon", params.length > 1200 ? 6 : 4, 0.55),
     lineItem("table-fasteners", "Fastener Kit", "hardware", "steel", 24, 0.22),
     lineItem("table-packaging", "Flat-pack Kit", "packaging", "corrugated + kraft", 1, 14)
@@ -102,5 +108,6 @@ export function generateTableBOM(params: TableParams): BOMResult {
   return {
     items,
     totalBoardFeet: items.reduce((sum, item) => sum + (item.boardFeet ?? 0), 0),
+    totalRodMm,
   };
 }

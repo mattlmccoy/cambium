@@ -72,6 +72,9 @@ export function PartMesh({
           />
         </mesh>
       );
+    case "model":
+      // Model parts are handled by CoreModelMesh, not PartMesh
+      return null;
     default:
       return null;
   }

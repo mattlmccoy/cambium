@@ -87,8 +87,14 @@ export function generateChairBOM(params: ChairParams): BOMResult {
   if (params.legWrapStyle !== "exposed") {
     items.push(panelItem("leg-wraps", "Leg Wrap", params.woodSpecies, 4, params.seatHeight - params.seatThickness, 34, 10));
   }
+  const legHeight = params.seatHeight - params.seatThickness;
+  const legRodMm = legHeight * 4;
+  const backRodMm = params.backHeight * 2;
+  const seatRingMm = (params.seatWidth - 80) * 2;
+  const totalRodMm = legRodMm + backRodMm + seatRingMm;
+
   items.push(
-    lineItem("chair-core", "Chair Core Rods", "core", "powder-coated steel", 8, 5.5),
+    lineItem("chair-core", "Chair Core Rods", "core", "powder-coated steel", 8),
     lineItem("chair-joints", "Chair Joints", "core", "injection-molded nylon", 6, 0.5),
     lineItem("chair-fasteners", "Fastener Kit", "hardware", "steel", 16, 0.18),
     lineItem("chair-packaging", "Flat-pack Kit", "packaging", "corrugated + kraft", 1, 9)
@@ -96,5 +102,6 @@ export function generateChairBOM(params: ChairParams): BOMResult {
   return {
     items,
     totalBoardFeet: items.reduce((sum, item) => sum + (item.boardFeet ?? 0), 0),
+    totalRodMm,
   };
 }

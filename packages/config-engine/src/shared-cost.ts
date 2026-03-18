@@ -1,4 +1,4 @@
-import type { AnyProductParams, BOMResult, CostBreakdown } from "@cambium/shared";
+import type { AnyProductParams, BOMResult, CostBreakdown, ProductSlug } from "@cambium/shared";
 import type { CostModelInputs } from "./types";
 import {
   FINISHES,
@@ -57,7 +57,8 @@ export function calculateFinishCost(params: AnyProductParams, bom: BOMResult): n
 export function calculateCost(
   params: AnyProductParams,
   bom: BOMResult,
-  costModel: CostModelInputs
+  costModel: CostModelInputs,
+  slug?: ProductSlug
 ): CostBreakdown {
   // ─── Regional pricing ─────────────────────────────────────────
   const regionId = costModel.regionId ?? params.regionId;
@@ -84,22 +85,28 @@ export function calculateCost(
   const effectiveShipping = regionFactors.shippingBase;
 
   const cncTime = estimatePanelCncHours(params, bom) * effectiveCncRate;
-  const partsCost = bom.items.reduce(
+
+  // Parts cost: non-rod items use unitCost; rod cost comes from totalRodMm × per-mm rate
+  const nonRodPartsCost = bom.items.reduce(
     (sum, item) => sum + (item.unitCost ?? 0) * item.quantity,
     0
   );
+  const productCost = slug ? costModel.productCosts[slug] : undefined;
+  const rodCost = bom.totalRodMm * (productCost?.rodCostPerMm ?? 0.006);
+  const partsCost = nonRodPartsCost + rodCost;
+
   const finishCost = calculateFinishCost(params, bom);
   const labor = 0.35 * effectiveLaborRate;
   const shipping = effectiveShipping;
 
   // Overhead per unit, adjusted by region
-  const overheadPerUnit = (4000 / 200) * regionFactors.overheadMultiplier;
+  const overheadBase = costModel.overheadPerMonth / costModel.unitsPerMonth;
+  const overheadPerUnit = overheadBase * regionFactors.overheadMultiplier;
 
   const subtotal = material + cncTime + partsCost + finishCost + labor + shipping + overheadPerUnit;
 
-  // Gross margin pricing: price = cost / (1 - grossMargin)
-  // e.g., 55% gross margin → price = cost / 0.45
-  const grossMargin = costModel.grossMargin;
+  // Per-product margin, falling back to global grossMargin
+  const grossMargin = (slug && costModel.productMargins?.[slug]) ?? costModel.grossMargin;
   const total = Math.ceil(subtotal / (1 - grossMargin));
   const margin = total - subtotal;
 
@@ -118,15 +125,23 @@ export function calculateCost(
 
 export const DEFAULT_COST_MODEL: CostModelInputs = {
   pricePerBoardFoot: 8.5,     // fallback only — regional pricing overrides this
-  cncRatePerHour: 75,          // base rate, multiplied by regional factor
-  laborRate: 35,               // base rate, multiplied by regional factor
-  shippingBase: 25,            // fallback only — regional shipping overrides this
-  grossMargin: 0.55,           // 55% gross margin (DTC furniture standard)
+  cncRatePerHour: 35,          // own-CNC microfactory rate (was 75)
+  laborRate: 30,               // base rate, multiplied by regional factor (was 35)
+  shippingBase: 18,            // fallback only — regional shipping overrides this (was 25)
+  grossMargin: 0.45,           // 45% fallback margin (was 55%)
+  overheadPerMonth: 4000,      // monthly fixed costs (rent, utilities, insurance)
+  unitsPerMonth: 500,          // target production volume (was implicit 200)
   productCosts: {
-    "side-table": { rodCostPerMm: 0.012, jointCost: 0.45, packagingCost: 8 },
-    table: { rodCostPerMm: 0.016, jointCost: 0.55, packagingCost: 14 },
-    chair: { rodCostPerMm: 0.013, jointCost: 0.5, packagingCost: 9 },
-    shelf: { rodCostPerMm: 0.011, jointCost: 0.4, packagingCost: 10 },
+    "side-table": { rodCostPerMm: 0.006, jointCost: 0.35, packagingCost: 6 },
+    table: { rodCostPerMm: 0.008, jointCost: 0.45, packagingCost: 12 },
+    chair: { rodCostPerMm: 0.006, jointCost: 0.40, packagingCost: 7 },
+    shelf: { rodCostPerMm: 0.005, jointCost: 0.30, packagingCost: 8 },
+  },
+  productMargins: {
+    "side-table": 0.40,
+    table: 0.50,
+    chair: 0.45,
+    shelf: 0.40,
   },
   regionId: "minneapolis",     // baseline / geographic center of US
 };

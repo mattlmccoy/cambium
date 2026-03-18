@@ -83,7 +83,7 @@ export function lineItem(
   category: BOMItem["category"],
   material: string,
   quantity: number,
-  unitCost: number
+  unitCost?: number
 ): BOMItem {
   return {
     partId,
@@ -91,6 +91,6 @@ export function lineItem(
     category,
     material,
     quantity,
-    unitCost,
+    ...(unitCost !== undefined && { unitCost }),
   };
 }

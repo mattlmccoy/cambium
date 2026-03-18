@@ -167,14 +167,20 @@ export function generateSideTableBOM(params: SideTableParams): BOMResult {
     items.push(panelItem("apron-covers", "Apron Covers", params.woodSpecies, 2, Math.max(260, params.topWidth - 90), 32, 8));
   }
 
+  const apronWidth = Math.max(260, params.topWidth - 90);
+  const apronDepth = Math.max(260, params.topDepth - 90);
+  const legRodMm = legHeight * params.legCount;
+  const apronRodMm = 2 * (apronWidth - 16) + 2 * (apronDepth - 16);
+  const totalRodMm = legRodMm + apronRodMm;
+
   const rodQuantity = params.legCount + 4;
   items.push(
-    lineItem("core-rods", "Bent Steel Rods", "core", "powder-coated steel", rodQuantity, 6),
+    lineItem("core-rods", "Bent Steel Rods", "core", "powder-coated steel", rodQuantity),
     lineItem("core-joints", "Fold-flat Joints", "core", "injection-molded nylon", 4, 0.45),
     lineItem("panel-fasteners", "M5 Fastener Kit", "hardware", "steel", params.legCount * 4 + 8, 0.18),
     lineItem("packaging", "Flat-pack Kit", "packaging", "corrugated + honeycomb paper", 1, 8)
   );
 
   const totalBoardFeet = items.reduce((sum, item) => sum + (item.boardFeet ?? 0), 0);
-  return { items, totalBoardFeet };
+  return { items, totalBoardFeet, totalRodMm };
 }

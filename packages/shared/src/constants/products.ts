@@ -118,7 +118,7 @@ export const PRODUCT_CATALOG: Record<
     minJanka: 600,
     category: "accent",
     description: "Compact accent table with a fold-flat Core and CNC-cut wood wraps.",
-    priceBand: { min: 149, max: 349 },
+    priceBand: { min: 99, max: 249 },
     defaults: SIDE_TABLE_DEFAULTS,
     constraints: SIDE_TABLE_CONSTRAINTS,
     core: {
@@ -154,7 +154,7 @@ export const PRODUCT_CATALOG: Record<
       { id: "coffee", label: "Coffee" },
     ],
     defaultModeLabel: "Dining",
-    priceBand: { min: 349, max: 1095 },
+    priceBand: { min: 249, max: 899 },
     defaults: TABLE_DEFAULTS,
     constraints: {
       length: TABLE_CONSTRAINTS.length,
@@ -190,7 +190,7 @@ export const PRODUCT_CATALOG: Record<
     minJanka: 1000,
     category: "seating",
     description: "Core-led seating frame with cosmetic wood seat, back, and leg wraps.",
-    priceBand: { min: 249, max: 449 },
+    priceBand: { min: 149, max: 349 },
     defaults: CHAIR_DEFAULTS,
     constraints: CHAIR_CONSTRAINTS,
     core: {
@@ -226,7 +226,7 @@ export const PRODUCT_CATALOG: Record<
       { id: "wall-mount", label: "Wall-Mount" },
     ],
     defaultModeLabel: "Free-Standing",
-    priceBand: { min: 129, max: 849 },
+    priceBand: { min: 79, max: 499 },
     defaults: SHELF_DEFAULTS,
     constraints: SHELF_CONSTRAINTS,
     core: {

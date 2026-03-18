@@ -28,9 +28,15 @@ export interface CostModelInputs {
   cncRatePerHour: number;
   laborRate: number;
   shippingBase: number;
-  /** Target gross margin as decimal (0.55 = 55%). Price = cost / (1 - grossMargin) */
+  /** Target gross margin as decimal (0.45 = 45%). Price = cost / (1 - grossMargin) */
   grossMargin: number;
+  /** Monthly fixed overhead cost (rent, utilities, insurance, etc.) */
+  overheadPerMonth: number;
+  /** Expected units produced per month — overhead is spread across units */
+  unitsPerMonth: number;
   productCosts: Record<ProductSlug, ProductCostModel>;
+  /** Per-product margin overrides. Falls back to grossMargin if not specified. */
+  productMargins?: Partial<Record<ProductSlug, number>>;
   /** Optional region ID for regional pricing adjustments */
   regionId?: string;
 }

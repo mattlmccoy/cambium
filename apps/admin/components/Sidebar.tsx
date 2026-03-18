@@ -24,6 +24,12 @@ const NAV_SECTIONS = [
       { href: "/planning", label: "Planning Board", icon: "📝" },
     ],
   },
+  {
+    label: "Dev Tools",
+    items: [
+      { href: "/dev-viewer", label: "3D Model Viewer", icon: "🔧" },
+    ],
+  },
 ];
 
 export default function Sidebar() {

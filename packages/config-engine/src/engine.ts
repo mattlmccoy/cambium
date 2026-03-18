@@ -13,7 +13,7 @@ export function computeConfiguration<TParams extends AnyProductParams>(
   const validation = runtime.validate(normalized);
   const geometry = runtime.generateGeometry(normalized);
   const bom = runtime.generateBOM(normalized);
-  const cost = calculateCost(normalized, bom, costModel);
+  const cost = calculateCost(normalized, bom, costModel, slug);
 
   return {
     productSlug: slug,

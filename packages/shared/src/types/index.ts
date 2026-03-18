@@ -197,6 +197,14 @@ export type ShapeDescriptor =
       height: number;
       depth: number;
       radius: number;
+    }
+  | {
+      /** Loaded from a GLB/glTF model file */
+      kind: "model";
+      /** Model identifier (e.g., "side-table-core") — maps to /models/cores/{modelId}.glb */
+      modelId: string;
+      /** Optional scale override (default: [1,1,1]) */
+      scale?: Vec3;
     };
 
 export interface GeometryResult {
@@ -220,6 +228,8 @@ export interface BOMItem {
 export interface BOMResult {
   items: BOMItem[];
   totalBoardFeet: number;
+  /** Total steel rod length in mm — used for per-mm rod cost calculation */
+  totalRodMm: number;
 }
 
 // ─── Cost Types ──────────────────────────────────────────────────
