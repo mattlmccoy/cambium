@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, Suspense, useMemo, useEffect } from "react";
+import { useState, useRef, useCallback, Suspense, useMemo, useEffect, type RefObject } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -185,15 +185,18 @@ function ModelScene({
   materialOverrides,
   showAxes,
   orientation,
+  onOrientationChange,
   onStats,
 }: {
   url: string;
   materialOverrides: MaterialOverrides;
   showAxes: boolean;
   orientation: [number, number, number];
+  onOrientationChange: (euler: [number, number, number]) => void;
   onStats: (stats: ModelStats) => void;
 }) {
   const { scene } = useGLTF(url);
+  const orientationGroupRef = useRef<THREE.Group>(null);
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
@@ -265,11 +268,45 @@ function ModelScene({
     return 1.5 / maxDim;
   }, [clonedScene.stats.boundingBox]);
 
+  // Click a face → rotate so that face becomes the floor
+  const handleFaceClick = useCallback(
+    (event: { stopPropagation: () => void; face?: THREE.Face | null; object: THREE.Object3D }) => {
+      event.stopPropagation();
+      if (!event.face) return;
+
+      // Get face normal in world space
+      const worldNormal = event.face.normal.clone();
+      (event.object as THREE.Mesh).updateMatrixWorld();
+      const normalMatrix = new THREE.Matrix3().getNormalMatrix(event.object.matrixWorld);
+      worldNormal.applyMatrix3(normalMatrix).normalize();
+
+      // We want to rotate so this face normal points DOWN (−Y)
+      // setFromUnitVectors gives us the rotation from worldNormal → downVec
+      const downVec = new THREE.Vector3(0, -1, 0);
+      const correction = new THREE.Quaternion().setFromUnitVectors(worldNormal, downVec);
+
+      // Compose with current orientation: new = correction × current
+      const currentQuat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(orientation[0], orientation[1], orientation[2])
+      );
+      const newQuat = correction.multiply(currentQuat);
+
+      const newEuler = new THREE.Euler().setFromQuaternion(newQuat);
+      onOrientationChange([newEuler.x, newEuler.y, newEuler.z]);
+    },
+    [orientation, onOrientationChange]
+  );
+
   return (
     <group scale={scale}>
       {/* Orientation wrapper — rotates model to chosen "floor" */}
-      <group rotation={orientation}>
-        <primitive object={clonedScene.clone} />
+      <group ref={orientationGroupRef} rotation={orientation}>
+        <primitive
+          object={clonedScene.clone}
+          onClick={handleFaceClick}
+          onPointerOver={() => { document.body.style.cursor = "pointer"; }}
+          onPointerOut={() => { document.body.style.cursor = "auto"; }}
+        />
       </group>
       {showAxes && <axesHelper args={[500]} />}
     </group>
@@ -634,6 +671,7 @@ export default function DevViewerPage() {
                   materialOverrides={materialOverrides}
                   showAxes={showAxes}
                   orientation={orientation}
+                  onOrientationChange={setOrientation}
                   onStats={handleStats}
                 />
               ) : (
@@ -734,6 +772,9 @@ export default function DevViewerPage() {
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
                 Orientation
               </h3>
+              <p className="text-[11px] text-zinc-500 mb-3">
+                Click any face on the model to make it the floor, or use presets below.
+              </p>
               <div className="space-y-3">
                 {/* Presets */}
                 <div className="grid grid-cols-2 gap-1.5">
