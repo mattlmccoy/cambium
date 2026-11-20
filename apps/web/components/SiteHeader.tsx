@@ -9,7 +9,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200/60 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <CambiumLogoMark size={22} color="#44403c" />
@@ -24,7 +24,7 @@ export function SiteHeader() {
         </Link>
 
         {/* Nav */}
-        <nav className="flex items-center gap-6">
+        <nav className="flex flex-wrap items-center gap-4">
           <Link
             href="/our-story"
             className={`text-sm transition-colors ${
@@ -58,6 +58,7 @@ export function SiteHeader() {
             </svg>
             Saved
           </Link>
+          <Link href="/design-lab/chair" className="text-sm text-stone-600 hover:text-stone-900">The chair</Link>
           <BenchLink pathname={pathname} />
         </nav>
       </div>
