@@ -3,7 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { LAUNCH_PRODUCTS, getLaunchWoods, REGIONS, REGION_STORIES, SPECIES_STORIES, getWoodSuitability } from "@cambium/shared";
 import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
@@ -26,27 +25,6 @@ const cardHover = {
   rest: { scale: 1 },
   hover: { scale: 1.02, transition: { duration: 0.3, ease: "easeOut" } },
 };
-
-// ─── First Visit Redirect ─────────────────────────────────────────
-
-const VISITED_KEY = "cambium-visited";
-
-function useFirstVisitRedirect() {
-  const router = useRouter();
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    const visited = localStorage.getItem(VISITED_KEY);
-    if (!visited) {
-      localStorage.setItem(VISITED_KEY, "true");
-      router.replace("/our-story");
-    } else {
-      setChecked(true);
-    }
-  }, [router]);
-
-  return checked;
-}
 
 // ─── Region Story Component ─────────────────────────────────────
 
@@ -156,20 +134,10 @@ function useRegionalStartingPrice(regionId: string) {
 export default function Home() {
   const { regionId, isDetected, hydrate } = useRegionStore();
   const prices = useRegionalStartingPrice(regionId);
-  const ready = useFirstVisitRedirect();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
-
-  // Don't render until we've checked first-visit status
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50">
-        <div className="text-sm text-stone-400">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_rgba(244,240,235,0.95)_42%,_#e5ddd3_100%)]">
