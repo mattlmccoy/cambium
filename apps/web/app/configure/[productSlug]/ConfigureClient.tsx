@@ -2,14 +2,14 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ControlPanel } from "@/components/configurator/ControlPanel";
 import { useConfiguratorStore } from "@/lib/configurator-store";
 import { useRegionStore } from "@/lib/region-store";
 import { useBenchStore } from "@/lib/bench-store";
 import { useSavedDesignsStore } from "@/lib/saved-designs-store";
-import { isProductSlug } from "@cambium/shared";
+import { isProductSlug, isLaunchProduct, isLaunchConfiguration } from "@cambium/shared";
 import { CambiumLogoMark } from "@/components/CambiumLogo";
 
 const ConfiguratorScene = dynamic(
@@ -33,13 +33,15 @@ function SceneLoading() {
   );
 }
 
-export default function ConfigureClient({ productSlug }: { productSlug: string }) {
+export default function ConfigureClient({ productSlug, studio = false }: { productSlug: string; studio?: boolean }) {
   const setProduct = useConfiguratorStore((state) => state.setProduct);
   const setParams = useConfiguratorStore((state) => state.setParams);
   const product = useConfiguratorStore((state) => state.product);
   const regionId = useRegionStore((state) => state.regionId);
   const hydrate = useRegionStore((state) => state.hydrate);
   const searchParams = useSearchParams();
+  const [customSave, setCustomSave] = useState(false);
+  const studioMode = studio || !isLaunchProduct(productSlug) || customSave;
 
   useEffect(() => {
     hydrate();
@@ -47,30 +49,18 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
     useSavedDesignsStore.getState().hydrate();
   }, [hydrate]);
 
-  // Load product with region
+  // Hydration precedes loading; preserve every setting of older saved designs.
   useEffect(() => {
-    if (productSlug && isProductSlug(productSlug)) {
-      setProduct(productSlug, regionId);
-    }
-  }, [productSlug, setProduct, regionId]);
-
-  // Load from bench item or saved design via query params
-  useEffect(() => {
+    if (!isProductSlug(productSlug)) return;
     const benchId = searchParams.get("loadBench");
     const designId = searchParams.get("loadDesign");
-
-    if (benchId) {
-      const item = useBenchStore.getState().items.find((i) => i.id === benchId);
-      if (item) {
-        setParams(item.params);
-      }
-    } else if (designId) {
-      const design = useSavedDesignsStore.getState().designs.find((d) => d.id === designId);
-      if (design) {
-        setParams(design.params);
-      }
-    }
-  }, [searchParams, setParams]);
+    const saved = benchId
+      ? useBenchStore.getState().items.find(i => i.id === benchId)
+      : useSavedDesignsStore.getState().designs.find(d => d.id === designId);
+    setProduct(productSlug, regionId);
+    if (saved) setParams(saved.params);
+    setCustomSave(Boolean(saved && !isLaunchConfiguration(saved.params)));
+  }, [productSlug, regionId, searchParams, setProduct, setParams]);
 
   if (!productSlug || !isProductSlug(productSlug)) {
     return (
@@ -89,7 +79,7 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-screen lg:h-screen flex-col">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
           <CambiumLogoMark size={20} color="#44403c" />
@@ -98,22 +88,22 @@ export default function ConfigureClient({ productSlug }: { productSlug: string }
               CAMBIUM
             </span>
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-400">
-              Design
+              {studioMode ? "Design studio" : "Collection"}
             </span>
           </span>
         </Link>
         <div className="text-right">
           <div className="font-display text-base text-stone-900">{product.displayName}</div>
-          <div className="text-[10px] uppercase tracking-wider text-stone-400">{product.label} &middot; {product.sku}</div>
+          <div className="text-[10px] uppercase tracking-wider text-stone-400">{productSlug === "table" && !studioMode ? "Coffee table" : product.label}</div>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="flex w-[390px] flex-col overflow-hidden border-r border-stone-200 bg-white">
-          <ControlPanel />
+      <div className="flex flex-1 flex-col-reverse lg:flex-row lg:overflow-hidden">
+        <aside className="flex w-full lg:w-[390px] shrink-0 flex-col lg:overflow-hidden border-r border-stone-200 bg-white">
+          <ControlPanel studio={studioMode} />
         </aside>
-        <main className="flex-1 bg-stone-50 p-6">
-          <ConfiguratorScene />
+        <main className="h-[52vh] min-h-[400px] lg:h-auto lg:flex-1 bg-stone-50 p-3 lg:p-6">
+          <ConfiguratorScene studio={studioMode} />
         </main>
       </div>
     </div>

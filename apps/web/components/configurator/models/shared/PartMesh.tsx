@@ -2,7 +2,8 @@
 
 import * as THREE from "three";
 import { RoundedBox } from "@react-three/drei";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { ProfileMesh } from "./ProfileMesh";
 import type { GeometryPart } from "@cambium/shared";
 
 /**
@@ -12,19 +13,23 @@ import type { GeometryPart } from "@cambium/shared";
 export function PartMesh({
   part,
   color,
+  roughness = 0.72,
 }: {
   part: GeometryPart;
   color: string;
+  roughness?: number;
 }) {
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         color,
-        roughness: 0.72,
+        roughness,
         metalness: 0.02,
       }),
-    [color]
+    [color, roughness]
   );
+
+  useEffect(() => () => material.dispose(), [material]);
 
   const position: [number, number, number] = [
     part.position.x,
@@ -38,6 +43,10 @@ export function PartMesh({
   ];
 
   switch (part.shape.kind) {
+    case "profile-panel":
+    case "wood-shell":
+    case "tube":
+      return <ProfileMesh part={part} color={color} roughness={roughness} />;
     case "box":
       return (
         <mesh position={position} rotation={rotation} material={material} castShadow>
@@ -56,7 +65,7 @@ export function PartMesh({
           smoothness={4}
           castShadow
         >
-          <meshStandardMaterial color={color} roughness={0.72} metalness={0.02} />
+          <meshStandardMaterial color={color} roughness={roughness} metalness={0.02} />
         </RoundedBox>
       );
     case "cylinder":

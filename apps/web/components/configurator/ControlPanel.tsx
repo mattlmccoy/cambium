@@ -8,6 +8,9 @@ import { useBenchStore } from "@/lib/bench-store";
 import { useSavedDesignsStore } from "@/lib/saved-designs-store";
 import { CrossRegionDrawer } from "./CrossRegionDrawer";
 import {
+  getLaunchWoods,
+  isLaunchConfiguration,
+  launchDimensions,
   FINISHES,
   REGIONS,
   TABLE_CONSTRAINTS,
@@ -663,12 +666,14 @@ function PriceFooter({
   cost,
   bom,
   resetParams,
+  compact = false,
 }: {
   product: ProductDefinition;
   params: AnyProductParams;
   cost: { total: number; isLocalWood: boolean; crossRegionSurcharge: number };
   bom: BOMResult;
   resetParams: () => void;
+  compact?: boolean;
 }) {
   const addToBench = useBenchStore((s) => s.addItem);
   const saveDesign = useSavedDesignsStore((s) => s.saveDesign);
@@ -747,7 +752,7 @@ function PriceFooter({
       )}
 
       {/* Carbon footprint */}
-      <div className="mb-4">
+      <div className={compact ? "hidden" : "mb-4"}>
         <CarbonBadge
           bom={bom}
           speciesId={params.woodSpecies}
@@ -767,12 +772,12 @@ function PriceFooter({
           Includes ${cost.crossRegionSurcharge.toFixed(2)} cross-region tier surcharge
         </div>
       )}
-      {cost.isLocalWood && (
+      {!compact && cost.isLocalWood && (
         <div className="mb-2 rounded-md bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">
           Using locally-sourced wood &mdash; best value
         </div>
       )}
-      <div className="mb-4 text-xs text-stone-500">
+      <div className={compact ? "hidden" : "mb-4 text-xs text-stone-500"}>
         Target ${product.priceBand.min} &ndash; ${product.priceBand.max}
       </div>
 
@@ -832,7 +837,7 @@ function PriceFooter({
           </button>
           <button
             onClick={resetParams}
-            className="flex-1 rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-stone-400"
+            className={`${compact ? "hidden" : "flex-1"} rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition-colors hover:border-stone-400`}
           >
             Reset
           </button>
@@ -844,7 +849,7 @@ function PriceFooter({
 
 // ─── Main Control Panel ─────────────────────────────────────────
 
-export function ControlPanel() {
+export function ControlPanel({ studio = false }: { studio?: boolean }) {
   const product = useConfiguratorStore((s) => s.product);
   const params = useConfiguratorStore((s) => s.params);
   const cost = useConfiguratorStore((s) => s.cost);
@@ -852,6 +857,43 @@ export function ControlPanel() {
   const validation = useConfiguratorStore((s) => s.validation);
   const setParam = useConfiguratorStore((s) => s.setParam);
   const resetParams = useConfiguratorStore((s) => s.resetParams);
+
+  const launchWoods = getLaunchWoods(params.regionId);
+  if (!studio) return (
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex-1 space-y-7 p-6 md:p-8">
+        <div>
+          <p className="text-sm text-stone-500">{params.productSlug === 'table' ? 'Coffee table' : 'Side table'}</p>
+          <h1 className="font-display mt-2 text-4xl text-stone-900">{product.displayName}</h1>
+          <p className="mt-3 text-sm leading-relaxed text-stone-600">Solid hardwood. Soft edges. A quiet steel backbone.</p>
+          <p className="mt-3 text-sm text-stone-500">{launchDimensions(product.slug)}</p>
+        </div>
+        <section aria-label="Choose your wood">
+          <h2 className="mb-3 text-base font-medium text-stone-900">Your wood</h2>
+          <div className="grid gap-2">
+            {launchWoods.map(wood => <button key={wood.id} type="button" aria-pressed={params.woodSpecies === wood.id}
+              onClick={() => setParam('woodSpecies', wood.id)}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors ${params.woodSpecies === wood.id ? 'border-stone-900 bg-stone-100' : 'border-stone-200 hover:border-stone-400'}`}>
+              <span className="h-7 w-7 rounded-full border border-black/10" style={{ backgroundColor: wood.color }} />
+              <span>{wood.name}</span>
+            </button>)}
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-stone-500">Natural oil finish on every piece.</p>
+        </section>
+        <RegionDisplay />
+        {!launchWoods.length && <p className="rounded-xl bg-stone-100 p-4 text-sm text-stone-600">We’re still selecting the hardwood offering for this workshop. Choose another workshop to explore the collection.</p>}
+        {launchWoods.length > 0 && !isLaunchConfiguration(params) && <div className="rounded-xl bg-stone-100 p-4 text-sm leading-relaxed text-stone-600">
+          This saved configuration is a custom studio design. Its settings have been preserved.
+          <button type="button" onClick={resetParams} className="mt-3 block font-medium text-stone-900 underline">Start with the collection design</button>
+        </div>}
+        <details className="border-t border-stone-200 pt-4 text-sm text-stone-600">
+          <summary className="cursor-pointer text-stone-800">Materials & assembly</summary>
+          <p className="mt-3 leading-relaxed">Locally sourced hardwood, a powder-coated steel frame, and a knock-down assembly designed to ship flat. The shape, edges and proportions are selected as one complete design.</p>
+        </details>
+      </div>
+      {isLaunchConfiguration(params) && <PriceFooter product={product} params={params} cost={cost} bom={bom} resetParams={resetParams} compact />}
+    </div>
+  );
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
@@ -919,7 +961,7 @@ export function ControlPanel() {
 
           {/* Core visibility - shared across all products */}
           <OptionGroup<CoreVisibility>
-            label="Core Visibility"
+            label="Core Visibility · Preview"
             value={params.coreVisibility as CoreVisibility}
             options={[
               { id: "hidden", name: "Hidden" },
@@ -928,6 +970,7 @@ export function ControlPanel() {
             ]}
             onChange={(v) => setParam("coreVisibility", v)}
           />
+          <p className="text-xs text-stone-500">Visibility changes the inspection view, not the parts included.</p>
         </Section>
 
         {/* Material */}

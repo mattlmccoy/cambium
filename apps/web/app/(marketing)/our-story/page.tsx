@@ -361,7 +361,7 @@ export default function OurStoryPage() {
                 {
                   step: "04",
                   title: "Flat-pack to your door",
-                  desc: "Your furniture ships in a slim box with a fold-flat steel frame. Unfold, attach panels, done. One hex key.",
+                  desc: "Your furniture ships in a slim box with a knock-down steel frame. Bolt the frame together and attach the wood. One hex key.",
                 },
               ].map((item) => (
                 <motion.div
@@ -407,7 +407,7 @@ export default function OurStoryPage() {
             </motion.h2>
             <motion.div variants={fadeUp} className="space-y-4 text-stone-600">
               <p className="text-lg leading-relaxed">
-                Every Cambium piece is built on a standardized fold-flat steel subframe &mdash;
+                Every Cambium piece is built on a standardized knock-down steel subframe &mdash;
                 precision-welded steel rods with a matte black powder coat. This frame is the
                 skeleton that makes flat-pack assembly possible without sacrificing rigidity.
               </p>

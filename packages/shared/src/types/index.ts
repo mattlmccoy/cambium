@@ -112,6 +112,7 @@ export interface PackagingSpec {
 }
 
 export interface CoreSpec {
+  section?: string;
   summary: string;
   rodDiameterMm: number;
   jointTypes: string[];
@@ -193,6 +194,9 @@ export interface GeometryPart {
 }
 
 export type ShapeDescriptor =
+  | { kind: "profile-panel"; width: number; height: number; depth: number; cornerRadius: number; edge: EdgeProfile; ellipse?: boolean; scoop?: number; holes?: { x: number; z: number; width: number; depth: number }[] }
+  | { kind: "tube"; width: number; height: number; depth: number; wall: number }
+  | { kind: "wood-shell"; height: number; topWidth: number; bottomWidth: number; channel: number; side: -1 | 1 }
   | { kind: "box"; width: number; height: number; depth: number }
   | {
       kind: "cylinder";

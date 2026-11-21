@@ -8,7 +8,7 @@ import type {
   ProductSlug,
   ValidationResult,
 } from "@cambium/shared";
-import { PRODUCT_CATALOG, WOOD_SPECIES, getCheapestLocalSpecies, getSpeciesForRegion } from "@cambium/shared";
+import { PRODUCT_CATALOG, WOOD_SPECIES, getLaunchWoods, getCheapestLocalSpecies, getSpeciesForRegion } from "@cambium/shared";
 import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
 import type { CostModelInputs } from "@cambium/config-engine";
 
@@ -39,7 +39,7 @@ function computeForProduct(productSlug: ProductSlug, params: AnyProductParams, r
 
 /** Get the cheapest locally-available wood species for a region */
 function getIdealWood(regionId: string): string {
-  return getCheapestLocalSpecies(regionId, WOOD_SPECIES);
+  return getLaunchWoods(regionId)[0]?.id ?? getCheapestLocalSpecies(regionId, WOOD_SPECIES);
 }
 
 const initialRegion = "minneapolis";

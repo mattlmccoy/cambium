@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { PRODUCT_ORDER, REGIONS, WOOD_SPECIES, getSpeciesForRegion, REGION_STORIES, SPECIES_STORIES, getCheapestLocalSpecies, getEffectiveWoodPrice, getWoodSuitability } from "@cambium/shared";
+import { LAUNCH_PRODUCTS, getLaunchWoods, REGIONS, REGION_STORIES, SPECIES_STORIES, getWoodSuitability } from "@cambium/shared";
 import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
 import { useRegionStore } from "@/lib/region-store";
 import { ZipEntry } from "@/components/ZipEntry";
-import { PRODUCT_ILLUSTRATIONS } from "@/components/ProductIllustrations";
 import { CambiumLogoMark } from "@/components/CambiumLogo";
 
 // ─── Animation variants ──────────────────────────────────────────
@@ -53,7 +53,7 @@ function useFirstVisitRedirect() {
 function RegionShowcase({ regionId }: { regionId: string }) {
   const region = REGIONS.find((r) => r.id === regionId);
   const story = REGION_STORIES[regionId];
-  const localSpecies = getSpeciesForRegion(regionId);
+  const localSpecies = getLaunchWoods(regionId);
 
   if (!region || !story) return null;
 
@@ -79,7 +79,7 @@ function RegionShowcase({ regionId }: { regionId: string }) {
         </p>
 
         <div className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-400">
-          Local Wood Species
+          Selected local hardwoods
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {localSpecies.map((species) => {
@@ -117,20 +117,15 @@ function RegionShowcase({ regionId }: { regionId: string }) {
 
 // ─── Product Card with Regional Pricing ─────────────────────────
 
-const CARD_STYLES = [
-  "from-stone-900 via-stone-700 to-stone-500",
-  "from-stone-800 via-stone-600 to-amber-700",
-  "from-stone-900 via-stone-700 to-stone-500",
-  "from-stone-800 via-stone-600 to-amber-700",
-];
-
 function useRegionalStartingPrice(regionId: string) {
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const newPrices: Record<string, number> = {};
-    for (const product of PRODUCT_ORDER) {
-      const cheapestWood = getCheapestLocalSpecies(regionId, WOOD_SPECIES);
+    for (const product of LAUNCH_PRODUCTS) {
+      const woods = getLaunchWoods(regionId);
+      if (!woods.length) continue;
+      const cheapestWood = woods[0].id;
       const params = {
         ...product.defaults,
         regionId,
@@ -143,9 +138,11 @@ function useRegionalStartingPrice(regionId: string) {
           params,
           { ...DEFAULT_COST_MODEL, regionId }
         );
-        newPrices[product.slug] = result.cost.total;
+        newPrices[product.slug] = Math.min(result.cost.total, ...woods.slice(1).map(wood =>
+          computeConfiguration(product.slug, { ...params, woodSpecies: wood.id }, { ...DEFAULT_COST_MODEL, regionId }).cost.total
+        ));
       } catch {
-        newPrices[product.slug] = product.priceBand.min;
+        // No price is shown when the configured estimate is unavailable.
       }
     }
     setPrices(newPrices);
@@ -189,14 +186,14 @@ export default function Home() {
               variants={fadeUp}
               className="font-display mb-4 text-4xl leading-tight tracking-tight text-stone-900 sm:text-5xl lg:text-6xl"
             >
-              Designed by you.{" "}
+              Considered design.{" "}
               <span className="text-stone-500">Built near you.</span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
               className="mb-6 text-lg leading-relaxed text-stone-600"
             >
-              Custom solid wood furniture, crafted at a microfactory in your region from locally-sourced lumber. Design it in 3D, and it ships flat-packed to your door.
+              Solid hardwood furniture with thoughtful proportions and fewer choices. Choose your piece and local wood, explore it in 3D, and see how it packs flat.
             </motion.p>
             <motion.div variants={fadeUp}>
               <ZipEntry />
@@ -230,13 +227,12 @@ export default function Home() {
               {isDetected ? "Build something with local wood" : "Explore our collection"}
             </motion.h2>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {PRODUCT_ORDER.map((product, index) => {
+            <div className="grid gap-5 md:grid-cols-2">
+              {LAUNCH_PRODUCTS.map((product) => {
                 const startingPrice = prices[product.slug];
-                const Illustration = PRODUCT_ILLUSTRATIONS[product.slug];
 
                 // Find top recommended local woods for this product
-                const localSpecies = getSpeciesForRegion(regionId);
+                const localSpecies = getLaunchWoods(regionId);
                 const bestWoods = localSpecies
                   .filter((s) => getWoodSuitability(product.slug, s.hardness).rating === "recommended")
                   .sort((a, b) => b.hardness - a.hardness)
@@ -254,28 +250,14 @@ export default function Home() {
                         href={`/configure/${product.slug}`}
                         className="group flex w-full flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white/60 shadow-[0_24px_60px_rgba(66,44,22,0.12)] backdrop-blur transition-shadow hover:shadow-[0_24px_60px_rgba(66,44,22,0.2)]"
                       >
-                        {/* Card header — fixed height gradient with illustration */}
-                        <div
-                          className={`relative h-52 shrink-0 overflow-hidden bg-gradient-to-br ${CARD_STYLES[index]} p-6 text-white`}
-                        >
-                          {Illustration && (
-                            <div className="absolute -right-2 -bottom-2 h-36 w-36 text-white/[0.08] transition-all duration-500 group-hover:text-white/[0.15] group-hover:scale-110">
-                              <Illustration className="h-full w-full" />
-                            </div>
-                          )}
-                          <div className="relative z-10 flex h-full flex-col justify-between">
-                            <span className="text-xs uppercase tracking-[0.25em] text-white/60">
-                              {product.label}
-                            </span>
-                            <div>
-                              <div className="font-display mb-1 text-3xl">
-                                {product.displayName}
-                              </div>
-                              <div className="text-sm italic text-white/50">
-                                {product.tagline}
-                              </div>
-                            </div>
-                          </div>
+                        <div className="relative aspect-[6/5] shrink-0 overflow-hidden bg-[#e9e6df]">
+                          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/images/collection/${product.slug}.png`} alt={`${product.displayName}: ${product.label.toLowerCase()} in hardwood with a recessed steel frame`}
+                            fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        </div>
+                        <div className="px-6 pt-5">
+                          <div className="text-xs uppercase tracking-[.18em] text-stone-500">{product.slug === "table" ? "Coffee table" : product.label}</div>
+                          <div className="font-display mt-1 text-3xl text-stone-900">{product.displayName}</div>
+                          <div className="mt-1 text-sm text-stone-500">{product.tagline}</div>
                         </div>
                         {/* Card body — flex-1 so all cards match height */}
                         <div className="flex flex-1 flex-col justify-between p-6">
@@ -285,7 +267,7 @@ export default function Home() {
                             </div>
                             {isDetected && bestWoods.length > 0 && (
                               <div className="flex items-center gap-1.5 text-[11px] text-emerald-700">
-                                <span className="font-medium">Best local woods:</span>
+                                <span className="font-medium">Local hardwoods:</span>
                                 {bestWoods.map((w) => (
                                   <span key={w.id} className="flex items-center gap-1">
                                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} />
@@ -297,10 +279,10 @@ export default function Home() {
                           </div>
                           <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-4 text-sm">
                             <span className="font-medium text-stone-900">
-                              {startingPrice ? `From $${startingPrice}` : `$${product.priceBand.min} \u2013 $${product.priceBand.max}`}
+                              {startingPrice ? `Est. from $${startingPrice}` : "Assortment coming soon"}
                             </span>
                             <span className="text-stone-400 transition-transform group-hover:translate-x-1">
-                              Design yours &rarr;
+                              Choose your wood
                             </span>
                           </div>
                         </div>
@@ -314,6 +296,7 @@ export default function Home() {
         </div>
       </div>
 
+      <section className="mx-auto mb-16 grid max-w-6xl items-center gap-8 px-6 md:grid-cols-2" aria-label="The chair in development"><Link href="/design-lab/chair"><img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/images/chair-06/covered.png`} width={1200} height={1200} alt="Hardwood chair with a concealed steel frame" className="rounded-[28px]"/></Link><div><p className="text-sm uppercase tracking-widest text-stone-500">Coming next</p><h2 className="mt-3 font-display text-4xl">The chair.</h2><p className="mt-4 leading-relaxed text-stone-600">Hardwood legs and a quiet silhouette, with structure concealed within. We are refining comfort and construction before introducing it to the collection.</p><Link href="/design-lab/chair" className="mt-5 inline-block underline underline-offset-4">Explore the chair</Link></div></section>
       {/* How it works — visual step strip */}
       <motion.div
         initial="hidden"
@@ -329,9 +312,9 @@ export default function Home() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { step: "01", icon: "M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z", title: "Enter your ZIP", desc: "Find your local workshop and its wood species." },
-              { step: "02", icon: "M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25", title: "Design in 3D", desc: "Configure dimensions, wood species, and finish in real time." },
+              { step: "02", icon: "M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25", title: "Design in 3D", desc: "Choose a considered design and your local hardwood." },
               { step: "03", icon: "M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085", title: "We CNC-cut it", desc: "Your panels are precision-cut from locally-sourced lumber." },
-              { step: "04", icon: "M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12", title: "Ships flat-packed", desc: "One slim box with a fold-flat steel frame. One hex key. Done." },
+              { step: "04", icon: "M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12", title: "Ships flat-packed", desc: "Designed to pack flat, with a knock-down frame and straightforward assembly." },
             ].map((item) => (
               <motion.div
                 key={item.step}
@@ -372,7 +355,7 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-xs leading-relaxed text-stone-400">
-                Furniture with roots. Designed by you, built from locally-sourced wood at a microfactory near you.
+                Furniture with roots. Considered designs for locally-sourced hardwood and regional fabrication.
               </p>
             </div>
 
@@ -381,7 +364,7 @@ export default function Home() {
               <div>
                 <div className="mb-2 font-medium uppercase tracking-wider text-stone-400">Products</div>
                 <div className="space-y-1.5">
-                  {PRODUCT_ORDER.map((p) => (
+                  {LAUNCH_PRODUCTS.map((p) => (
                     <div key={p.slug}>
                       <Link href={`/configure/${p.slug}`} className="text-stone-500 transition-colors hover:text-stone-900">
                         {p.displayName}
@@ -405,7 +388,7 @@ export default function Home() {
           <div className="border-t border-stone-200/60 pt-6">
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
               <span className="text-[10px] text-stone-400">
-                10 workshops &middot; 27 species &middot; your region
+                Two designs &middot; local hardwood &middot; one natural finish
               </span>
               <span className="text-[10px] text-stone-300">
                 &copy; {new Date().getFullYear()} Cambium Design
