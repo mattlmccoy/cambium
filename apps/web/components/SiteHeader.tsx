@@ -58,7 +58,8 @@ export function SiteHeader() {
             </svg>
             Saved
           </Link>
-          <Link href="/design-lab/chair" className="text-sm text-stone-600 hover:text-stone-900">The chair</Link>
+          <Link href="/collections" className="text-sm text-stone-600 hover:text-stone-900">Collections</Link>
+          <Link href="/design-lab" className="text-sm text-stone-500 hover:text-stone-900">Design tools</Link>
           <BenchLink pathname={pathname} />
         </nav>
       </div>

@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { LAUNCH_PRODUCTS, getLaunchWoods, REGIONS, REGION_STORIES, SPECIES_STORIES, getWoodSuitability } from "@cambium/shared";
-import { computeConfiguration, DEFAULT_COST_MODEL } from "@cambium/config-engine";
 import { useRegionStore } from "@/lib/region-store";
 import { ZipEntry } from "@/components/ZipEntry";
 import { CambiumLogoMark } from "@/components/CambiumLogo";
@@ -95,45 +94,10 @@ function RegionShowcase({ regionId }: { regionId: string }) {
 
 // ─── Product Card with Regional Pricing ─────────────────────────
 
-function useRegionalStartingPrice(regionId: string) {
-  const [prices, setPrices] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const newPrices: Record<string, number> = {};
-    for (const product of LAUNCH_PRODUCTS) {
-      const woods = getLaunchWoods(regionId);
-      if (!woods.length) continue;
-      const cheapestWood = woods[0].id;
-      const params = {
-        ...product.defaults,
-        regionId,
-        woodSpecies: cheapestWood,
-        finish: "natural-oil" as const,
-      };
-      try {
-        const result = computeConfiguration(
-          product.slug,
-          params,
-          { ...DEFAULT_COST_MODEL, regionId }
-        );
-        newPrices[product.slug] = Math.min(result.cost.total, ...woods.slice(1).map(wood =>
-          computeConfiguration(product.slug, { ...params, woodSpecies: wood.id }, { ...DEFAULT_COST_MODEL, regionId }).cost.total
-        ));
-      } catch {
-        // No price is shown when the configured estimate is unavailable.
-      }
-    }
-    setPrices(newPrices);
-  }, [regionId]);
-
-  return prices;
-}
-
 // ─── Main Landing Page ──────────────────────────────────────────
 
 export default function Home() {
   const { regionId, isDetected, hydrate } = useRegionStore();
-  const prices = useRegionalStartingPrice(regionId);
 
   useEffect(() => {
     hydrate();
@@ -197,7 +161,6 @@ export default function Home() {
 
             <div className="grid gap-5 md:grid-cols-2">
               {LAUNCH_PRODUCTS.map((product) => {
-                const startingPrice = prices[product.slug];
 
                 // Find top recommended local woods for this product
                 const localSpecies = getLaunchWoods(regionId);
@@ -215,16 +178,16 @@ export default function Home() {
                       className="flex w-full"
                     >
                       <Link
-                        href={`/configure/${product.slug}`}
+                        href={`/collections?product=${product.slug === 'table' ? 'coffee-table' : product.slug}`}
                         className="group flex w-full flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white/60 shadow-[0_24px_60px_rgba(66,44,22,0.12)] backdrop-blur transition-shadow hover:shadow-[0_24px_60px_rgba(66,44,22,0.2)]"
                       >
                         <div className="relative aspect-[6/5] shrink-0 overflow-hidden bg-[#e9e6df]">
-                          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/images/collection/${product.slug}.png`} alt={`${product.displayName}: ${product.label.toLowerCase()} in hardwood with a recessed steel frame`}
+                          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/images/collections-09/still-${product.slug === 'table' ? 'coffee-table' : product.slug}.jpg`} alt={`${product.displayName}: ${product.label.toLowerCase()} in hardwood with a recessed steel frame`}
                             fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                         </div>
                         <div className="px-6 pt-5">
                           <div className="text-xs uppercase tracking-[.18em] text-stone-500">{product.slug === "table" ? "Coffee table" : product.label}</div>
-                          <div className="font-display mt-1 text-3xl text-stone-900">{product.displayName}</div>
+                          <div className="font-display mt-1 text-3xl text-stone-900">Still {product.slug === 'table' ? 'coffee table' : 'side table'}</div>
                           <div className="mt-1 text-sm text-stone-500">{product.tagline}</div>
                         </div>
                         {/* Card body — flex-1 so all cards match height */}
@@ -235,7 +198,7 @@ export default function Home() {
                             </div>
                             {isDetected && bestWoods.length > 0 && (
                               <div className="flex items-center gap-1.5 text-[11px] text-emerald-700">
-                                <span className="font-medium">Local hardwoods:</span>
+                                <span className="font-medium">Proposed woods:</span>
                                 {bestWoods.map((w) => (
                                   <span key={w.id} className="flex items-center gap-1">
                                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: w.color }} />
@@ -247,10 +210,10 @@ export default function Home() {
                           </div>
                           <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-4 text-sm">
                             <span className="font-medium text-stone-900">
-                              {startingPrice ? `Est. from $${startingPrice}` : "Assortment coming soon"}
+                              In development
                             </span>
                             <span className="text-stone-400 transition-transform group-hover:translate-x-1">
-                              Choose your wood
+                              View design
                             </span>
                           </div>
                         </div>
@@ -264,7 +227,7 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="mx-auto mb-16 grid max-w-6xl items-center gap-8 px-6 md:grid-cols-2" aria-label="The chair in development"><Link href="/design-lab/chair"><img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/images/chair-07/hero.jpg`} width={1200} height={1200} alt="Hardwood chair with a concealed steel frame" className="rounded-[28px]"/></Link><div><p className="text-sm uppercase tracking-widest text-stone-500">Coming next</p><h2 className="mt-3 font-display text-4xl">The chair.</h2><p className="mt-4 leading-relaxed text-stone-600">A hardwood seat and back over a concealed steel frame. The chair is in development; joints, comfort and strength still need testing.</p><Link href="/design-lab/chair" className="mt-5 inline-block underline underline-offset-4">Explore the chair</Link></div></section>
+      <section className="mx-auto mb-16 max-w-6xl px-6" aria-label="Upcoming collections"><p className="text-sm uppercase tracking-widest text-stone-500">In development</p><h2 className="mt-3 font-display text-4xl">Three collections.</h2><p className="mt-4 max-w-2xl leading-relaxed text-stone-600">Still, Arc and Line. Replaceable wood surfaces, shared frame interfaces and a future upholstery kit.</p><div className="mt-7 grid gap-5 md:grid-cols-3">{[{id:'still',name:'Still',description:'Mid-century'}, {id:'arc',name:'Arc',description:'Rounded retro'}, {id:'line',name:'Line',description:'Exposed steel'}].map(drop=><Link key={drop.id} href={`/collections#${drop.id}`} className="overflow-hidden rounded-2xl border border-stone-200 bg-white/60"><img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/images/collections-09/${drop.id}-chair.jpg`} width={1100} height={1000} alt={`${drop.name} chair, CAD rendering`} className="w-full"/><div className="p-5"><h3 className="font-display text-2xl">{drop.name}</h3><p className="mt-1 text-sm text-stone-500">{drop.description}</p></div></Link>)}</div></section>
       {/* How it works — visual step strip */}
       <motion.div
         initial="hidden"
