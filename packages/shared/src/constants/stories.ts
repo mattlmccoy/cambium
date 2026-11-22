@@ -18,64 +18,64 @@ export interface SpeciesStory {
 
 export const REGION_STORIES: Record<string, RegionStory> = {
   seattle: {
-    headline: "Pacific Northwest Workshop",
+    headline: "Pacific Northwest",
     tagline: "Seattle, Washington",
-    story: "Nestled between the Cascades and the Puget Sound, our PNW workshop draws from one of the most productive temperate forests on Earth. Douglas fir, Western red cedar, and bigleaf maple grow in abundance in sustainably managed timberlands stretching from Oregon to British Columbia.",
-    forestFact: "Home to 25 million acres of managed timberland",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   sacramento: {
-    headline: "California Workshop",
+    headline: "California",
     tagline: "Sacramento, California",
-    story: "California's Central Valley workshop sits at the crossroads of the state's diverse forestlands — from the towering coast redwoods of the north to the prized Claro walnut orchards of the interior. Each board carries the warmth and character of California's unique growing conditions.",
-    forestFact: "California manages over 33 million acres of forestland",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   phoenix: {
-    headline: "Southwest Workshop",
+    headline: "Southwest",
     tagline: "Phoenix, Arizona",
-    story: "Our desert workshop specializes in the rugged, beautiful woods of the American Southwest. Mesquite, with its deep chocolate tones and extraordinary hardness, is salvaged from ranch land clearing — giving new life to wood that would otherwise be burned. Ponderosa pine descends from the high-elevation forests of the Mogollon Rim.",
-    forestFact: "Arizona's mesquite forests cover over 8 million acres",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   denver: {
-    headline: "Rocky Mountain Workshop",
+    headline: "Rocky Mountain",
     tagline: "Denver, Colorado",
-    story: "High in the Rockies, our Denver shop works with species shaped by altitude and arid conditions. Our signature material — beetle-kill blue pine — comes from trees lost to the mountain pine beetle epidemic. By milling this salvaged timber, we turn ecological loss into striking blue-streaked furniture.",
-    forestFact: "Colorado salvages 100,000+ acres of beetle-kill timber annually",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   austin: {
-    headline: "Texas Workshop",
+    headline: "Texas",
     tagline: "Austin, Texas",
-    story: "Deep in the heart of Texas, our Austin workshop celebrates the hardwoods of the South Central region. Native pecan — a member of the hickory family — provides exceptional strength and a warm, nutty grain pattern. Bald cypress from the Gulf Coast bayous adds rot-resistant beauty with centuries of Southern heritage.",
-    forestFact: "Texas is home to over 63 million acres of forestland",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   minneapolis: {
-    headline: "Upper Midwest Workshop",
+    headline: "Upper Midwest",
     tagline: "Minneapolis, Minnesota",
-    story: "Minnesota's workshop sits at the heart of America's northern hardwood belt. The Great North Woods provide an exceptional selection of classic furniture species — hard maple for its creamy white finish, yellow birch for its golden warmth, and red oak for its bold, open grain. These are the species that built American furniture tradition.",
-    forestFact: "Minnesota's 17 million acres of forest are 53% hardwood",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   chicago: {
-    headline: "Great Lakes Workshop",
+    headline: "Great Lakes",
     tagline: "Chicago, Illinois",
-    story: "Our Great Lakes workshop draws from the rich hardwood forests of the Midwest corridor. Black walnut — America's premier cabinet wood — grows in abundance across Illinois, Indiana, and Missouri. Cherry and hickory from these same forests offer everything from refined elegance to rugged country character.",
-    forestFact: "The Great Lakes region produces 30% of US hardwood lumber",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   pittsburgh: {
-    headline: "Mid-Atlantic Workshop",
+    headline: "Mid-Atlantic",
     tagline: "Pittsburgh, Pennsylvania",
-    story: "Pennsylvania has been the heart of American furniture-making since colonial times. Our Pittsburgh workshop continues that tradition with locally sourced black cherry — the gold standard of American fine furniture — alongside white oak, yellow poplar, and the hardwoods of the Appalachian range.",
-    forestFact: "Pennsylvania is the #1 US producer of hardwood lumber",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   boston: {
-    headline: "New England Workshop",
+    headline: "New England",
     tagline: "Boston, Massachusetts",
-    story: "From the white pine forests of Maine to the hardwood hills of Vermont, New England's woodland heritage runs deep. Our Boston workshop builds with Eastern white pine — the wood of colonial ship masts and farmhouse tables — alongside beech, hard maple, and the full palette of northern hardwoods.",
-    forestFact: "New England is 80% forested — the highest percentage since the 1800s",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
   atlanta: {
-    headline: "Southeast Workshop",
+    headline: "Southeast",
     tagline: "Atlanta, Georgia",
-    story: "The American South grows wood faster than anywhere in the temperate world. Our Atlanta workshop works with Southern yellow pine — the backbone of Southern construction — alongside rot-resistant cypress from the coastal lowlands and rich black walnut from the Piedmont uplands.",
-    forestFact: "The US Southeast supplies 58% of the nation's wood products",
+    story: "Proposed sourcing region. The wood selection shown here is preliminary; mills and production partners have not been confirmed.",
+    forestFact: "Availability will be confirmed before orders open.",
   },
 };
 
@@ -88,7 +88,7 @@ export const SPECIES_STORIES: Record<string, SpeciesStory> = {
   "western-red-cedar": {
     origin: "Pacific Northwest old-growth-adjacent managed stands, primarily from British Columbia and Washington",
     character: "Rich reddish-brown color that silvers gracefully with age. Naturally aromatic with exceptional rot resistance.",
-    bestFor: "Shelves and accent tables — lightweight with a beautiful natural fragrance",
+    bestFor: "Shelves and accent tables — lightweight with a natural fragrance",
   },
   "bigleaf-maple": {
     origin: "Harvested from managed forests in Oregon and Washington's coastal ranges",
@@ -98,7 +98,7 @@ export const SPECIES_STORIES: Record<string, SpeciesStory> = {
   "red-alder": {
     origin: "The most common hardwood in the Pacific Northwest, sustainably managed throughout Oregon and Washington",
     character: "Uniform reddish-brown tone with subtle grain. Takes stain exceptionally well and machines cleanly.",
-    bestFor: "All furniture types — reliable, affordable, and beautifully even-toned",
+    bestFor: "All furniture types — reliable, affordable, and even-toned",
   },
   "white-oak": {
     origin: "Found across eastern and central North America in well-managed hardwood forests",
@@ -118,7 +118,7 @@ export const SPECIES_STORIES: Record<string, SpeciesStory> = {
   "incense-cedar": {
     origin: "From managed forests in California's Sierra Nevada foothills",
     character: "Light reddish-brown with a spicy, pencil-like aroma. Fine, even grain with natural pest resistance.",
-    bestFor: "Shelves — naturally aromatic and beautifully straight-grained",
+    bestFor: "Shelves — naturally aromatic and straight-grained",
   },
   mesquite: {
     origin: "Salvaged from ranch land clearing and managed groves in Texas and Arizona",
@@ -131,7 +131,7 @@ export const SPECIES_STORIES: Record<string, SpeciesStory> = {
     bestFor: "Shelves and side tables — affordable warmth with a Western character",
   },
   "beetle-kill-pine": {
-    origin: "Salvaged from Colorado's beetle-kill epidemic — turning ecological loss into beautiful furniture",
+    origin: "Salvaged from Colorado's beetle-kill epidemic",
     character: "Distinctive blue-gray streaks through honey-toned pine from the beetle's blue-stain fungus. Each board tells a story of forest renewal.",
     bestFor: "All types — unique blue-streaked grain makes every piece a conversation starter",
   },

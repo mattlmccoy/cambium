@@ -18,7 +18,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "Cambium Design - Custom Furniture, Locally Made",
   description:
-    "Design personalized furniture crafted from locally-sourced wood at microfactories near you.",
+    "Explore Cambium furniture designs, compare regional woods and view each piece in 3D.",
 };
 
 export default function RootLayout({

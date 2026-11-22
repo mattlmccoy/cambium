@@ -865,7 +865,7 @@ export function ControlPanel({ studio = false }: { studio?: boolean }) {
         <div>
           <p className="text-sm text-stone-500">{params.productSlug === 'table' ? 'Coffee table' : 'Side table'}</p>
           <h1 className="font-display mt-2 text-4xl text-stone-900">{product.displayName}</h1>
-          <p className="mt-3 text-sm leading-relaxed text-stone-600">Solid hardwood. Soft edges. A quiet steel backbone.</p>
+          <p className="mt-3 text-sm leading-relaxed text-stone-600">Solid hardwood top with rounded edges and a recessed steel frame.</p>
           <p className="mt-3 text-sm text-stone-500">{launchDimensions(product.slug)}</p>
         </div>
         <section aria-label="Choose your wood">

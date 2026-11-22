@@ -47,7 +47,7 @@ function RegionShowcase({ regionId }: { regionId: string }) {
         className="rounded-3xl bg-white/70 p-8 shadow-sm backdrop-blur"
       >
         <div className="mb-1 text-xs uppercase tracking-[0.3em] text-stone-400">
-          Your Workshop
+          Your region
         </div>
         <h2 className="font-display mb-2 text-2xl text-stone-900">
           {story.headline}
@@ -154,14 +154,14 @@ export default function Home() {
               variants={fadeUp}
               className="font-display mb-4 text-4xl leading-tight tracking-tight text-stone-900 sm:text-5xl lg:text-6xl"
             >
-              Considered design.{" "}
-              <span className="text-stone-500">Built near you.</span>
+              Solid wood furniture.{" "}
+              <span className="text-stone-500">Made to pack flat.</span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
               className="mb-6 text-lg leading-relaxed text-stone-600"
             >
-              Solid hardwood furniture with thoughtful proportions and fewer choices. Choose your piece and local wood, explore it in 3D, and see how it packs flat.
+              Coffee and side tables in regional hardwoods. Compare woods, check dimensions and view each design in 3D. Products and regional production are in development.
             </motion.p>
             <motion.div variants={fadeUp}>
               <ZipEntry />
@@ -192,7 +192,7 @@ export default function Home() {
               variants={fadeUp}
               className="mb-6 text-xl font-light text-stone-800"
             >
-              {isDetected ? "Build something with local wood" : "Explore our collection"}
+              {isDetected ? "Tables in your region" : "The collection"}
             </motion.h2>
 
             <div className="grid gap-5 md:grid-cols-2">
@@ -264,7 +264,7 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="mx-auto mb-16 grid max-w-6xl items-center gap-8 px-6 md:grid-cols-2" aria-label="The chair in development"><Link href="/design-lab/chair"><img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/images/chair-06/covered.png`} width={1200} height={1200} alt="Hardwood chair with a concealed steel frame" className="rounded-[28px]"/></Link><div><p className="text-sm uppercase tracking-widest text-stone-500">Coming next</p><h2 className="mt-3 font-display text-4xl">The chair.</h2><p className="mt-4 leading-relaxed text-stone-600">Hardwood legs and a quiet silhouette, with structure concealed within. We are refining comfort and construction before introducing it to the collection.</p><Link href="/design-lab/chair" className="mt-5 inline-block underline underline-offset-4">Explore the chair</Link></div></section>
+      <section className="mx-auto mb-16 grid max-w-6xl items-center gap-8 px-6 md:grid-cols-2" aria-label="The chair in development"><Link href="/design-lab/chair"><img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/images/chair-07/hero.jpg`} width={1200} height={1200} alt="Hardwood chair with a concealed steel frame" className="rounded-[28px]"/></Link><div><p className="text-sm uppercase tracking-widest text-stone-500">Coming next</p><h2 className="mt-3 font-display text-4xl">The chair.</h2><p className="mt-4 leading-relaxed text-stone-600">A hardwood seat and back over a concealed steel frame. The chair is in development; joints, comfort and strength still need testing.</p><Link href="/design-lab/chair" className="mt-5 inline-block underline underline-offset-4">Explore the chair</Link></div></section>
       {/* How it works — visual step strip */}
       <motion.div
         initial="hidden"
@@ -279,10 +279,10 @@ export default function Home() {
           </motion.div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { step: "01", icon: "M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z", title: "Enter your ZIP", desc: "Find your local workshop and its wood species." },
-              { step: "02", icon: "M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25", title: "Design in 3D", desc: "Choose a considered design and your local hardwood." },
-              { step: "03", icon: "M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085", title: "We CNC-cut it", desc: "Your panels are precision-cut from locally-sourced lumber." },
-              { step: "04", icon: "M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12", title: "Ships flat-packed", desc: "Designed to pack flat, with a knock-down frame and straightforward assembly." },
+              { step: "01", icon: "M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z", title: "Enter your ZIP", desc: "See the proposed wood selection for your region." },
+              { step: "02", icon: "M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25", title: "Design in 3D", desc: "Compare woods and check the dimensions." },
+              { step: "03", icon: "M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085", title: "Regional production", desc: "We plan to machine the wood parts at regional workshops." },
+              { step: "04", icon: "M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12", title: "Flat packing", desc: "Removable parts reduce the space needed for shipping." },
             ].map((item) => (
               <motion.div
                 key={item.step}

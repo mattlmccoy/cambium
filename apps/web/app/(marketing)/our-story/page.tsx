@@ -212,14 +212,13 @@ export default function OurStoryPage() {
             variants={fadeUp}
             className="font-display mb-6 text-5xl leading-tight tracking-tight text-stone-900 sm:text-6xl"
           >
-            Furniture with roots
+            Furniture made closer to home
           </motion.h1>
           <motion.p
             variants={fadeUp}
             className="mx-auto mb-8 max-w-xl text-lg leading-relaxed text-stone-600"
           >
-            We believe every piece of furniture should tell a story &mdash;
-            where the wood grew, who shaped it, and the community it supports.
+            We are developing flat-pack furniture using shared steel components and wood parts made by regional workshops.
           </motion.p>
           <motion.div variants={fadeUp}>
             <svg
@@ -255,17 +254,14 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="font-display mb-6 text-3xl text-stone-900 sm:text-4xl"
             >
-              Furniture shouldn&apos;t cross an ocean to reach your living room
+              How we plan to keep costs down
             </motion.h2>
             <motion.div variants={fadeUp} className="space-y-4 text-stone-600">
               <p className="text-lg leading-relaxed">
-                Most furniture sold in the US is manufactured overseas, shipped thousands of miles
-                in containers, and assembled from materials of unknown origin. The carbon footprint
-                is massive, local craftspeople are cut out, and when something breaks, you throw it away.
+                Our plan is to buy standard frame components in volume and use the same parts across several products. Regional workshops would make the wood parts from locally available stock.
               </p>
               <p className="text-lg leading-relaxed">
-                Meanwhile, American forests produce exceptional hardwoods that go underutilized,
-                and skilled woodworkers across the country struggle to compete with global pricing.
+                We are also evaluating a lower-cost line with a fixed wood specification, fewer machining operations and one finish.
               </p>
             </motion.div>
           </motion.div>
@@ -290,15 +286,13 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="mb-6 text-3xl font-light sm:text-4xl"
             >
-              A network of 10 microfactories across the US
+              Proposed production regions
             </motion.h2>
             <motion.p
               variants={fadeUp}
               className="mb-12 text-lg leading-relaxed text-white/70"
             >
-              Instead of one massive factory overseas, we operate small CNC workshops
-              in major metro areas. Each one sources wood from local mills, cuts panels
-              to your exact specifications, and ships your order in days, not weeks.
+              The ten regions below are planning locations, not operating Cambium factories. We need to qualify mills, workshops and shipping routes before confirming availability or delivery times.
             </motion.p>
 
             <motion.div
@@ -356,7 +350,7 @@ export default function OurStoryPage() {
                 {
                   step: "03",
                   title: "We CNC-cut your panels",
-                  desc: "Your local workshop sources lumber from nearby mills and precision-cuts every panel on a CNC router.",
+                  desc: "Regional workshops would machine wood parts from stock supplied by nearby mills.",
                 },
                 {
                   step: "04",
@@ -403,18 +397,14 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="font-display mb-6 text-3xl text-stone-900 sm:text-4xl"
             >
-              One engineered frame. Infinite wood combinations.
+              Shared frame components
             </motion.h2>
             <motion.div variants={fadeUp} className="space-y-4 text-stone-600">
               <p className="text-lg leading-relaxed">
-                Every Cambium piece is built on a standardized knock-down steel subframe &mdash;
-                precision-welded steel rods with a matte black powder coat. This frame is the
-                skeleton that makes flat-pack assembly possible without sacrificing rigidity.
+                The designs use steel frames with removable cross rails. We are working to share tube sizes, fasteners and connection details across tables and chairs.
               </p>
               <p className="text-lg leading-relaxed">
-                The wood panels are the face of your furniture. They slide, clip, and bolt onto
-                the steel core. Because the core is universal, you can swap, upgrade, or replace
-                panels anytime &mdash; a new wood species, a fresh finish, or a different size altogether.
+                Wood attachment details vary by product. Replacement parts and cross-product compatibility will be specified after the joints and assembly process are tested.
               </p>
             </motion.div>
           </motion.div>
@@ -439,22 +429,22 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="font-display mb-12 text-3xl text-stone-900 sm:text-4xl"
             >
-              Wood with a story
+              Regional wood sourcing
             </motion.h2>
 
             <motion.div variants={stagger} className="grid gap-6 sm:grid-cols-3">
               {[
                 {
-                  title: "Lower carbon footprint",
-                  desc: "Wood travels hundreds of miles, not thousands. No container ships, no cross-country trucking for raw materials.",
+                  title: "Transport",
+                  desc: "We will compare material and finished-product transport before making environmental claims.",
                 },
                 {
-                  title: "Local forestry jobs",
-                  desc: "Every order supports regional mills and sustainable forest management practices in your part of the country.",
+                  title: "Mills and workshops",
+                  desc: "We plan to source wood and machine parts through regional suppliers.",
                 },
                 {
                   title: "Know your wood",
-                  desc: "We can tell you which region your lumber came from, what species it is, and why it grows there. That's a story worth telling.",
+                  desc: "Product listings will identify the species and sourcing region once suppliers are confirmed.",
                 },
               ].map((item) => (
                 <motion.div
@@ -496,13 +486,13 @@ export default function OurStoryPage() {
               variants={fadeUp}
               className="font-display mb-4 text-3xl text-stone-900 sm:text-4xl"
             >
-              Ready to design your first piece?
+              Find your region
             </motion.h2>
             <motion.p
               variants={fadeUp}
               className="mb-8 text-lg text-stone-600"
             >
-              Enter your ZIP to find your local workshop and see it highlighted on the map above.
+              Enter your ZIP to view the proposed sourcing region on the map.
             </motion.p>
             <motion.div variants={fadeUp} className="flex justify-center">
               <ZipEntry
